@@ -1,6 +1,7 @@
-import java.swing.*;
+import javax.swing.*;
 
-class PanelExample {
+
+public class PanelExample {
     public static void main(String[] args) {
         JFrame frame = new JFrame("JPanel Example");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
