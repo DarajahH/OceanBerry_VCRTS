@@ -8,7 +8,7 @@ import java.util.Date;
 import javax.swing.*;
 
 public class createPanel implements ActionListener {
-    // Fields for data collection [cite: 10-16]
+    // Fields for data collection
     private static JTextField idField, infoField, durationField, deadlineField;
     private static JComboBox<String> roleSelector;
     private static JFrame frame;
@@ -26,7 +26,7 @@ public class createPanel implements ActionListener {
             protected void paintComponent(Graphics g) {
                 Graphics2D g2d = (Graphics2D) g.create();
                 g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2d.setColor(new Color(255, 255, 255, 30)); // Frosted Glass effect 
+                g2d.setColor(new Color(255, 255, 255, 30)); // Frosted Glass effect
                 g2d.fillRoundRect(20, 20, getWidth() - 40, getHeight() - 40, 30, 30);
                 g2d.setColor(new Color(255, 255, 255, 60)); 
                 g2d.drawRoundRect(20, 20, getWidth() - 41, getHeight() - 41, 30, 30);
@@ -34,9 +34,9 @@ public class createPanel implements ActionListener {
             }
         };
         glassPanel.setOpaque(false);
-        glassPanel.setLayout(null); // Absolute positioning for precise Apple-style UI
+        glassPanel.setLayout(null);
 
-        // Header with Live Clock [cite: 41, 42]
+        // Header with Live Clock
         JLabel title = new JLabel("VCRTS MANAGEMENT SYSTEM");
         title.setForeground(Color.WHITE);
         title.setFont(new Font("Helvetica Neue", Font.BOLD, 24));
@@ -48,7 +48,7 @@ public class createPanel implements ActionListener {
         clock.setOpaque(false);
         glassPanel.add(clock);
 
-        // Input Fields [cite: 8-16]
+        // Input Fields
         int labelX = 100, fieldX = 300, startY = 120, spacing = 50;
 
         addStyledLabel(glassPanel, "User Role:", labelX, startY);
@@ -102,7 +102,7 @@ public class createPanel implements ActionListener {
         String role = (String) roleSelector.getSelectedItem();
         String timestamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
         
-        // Data Formatting for File [cite: 7, 64]
+        // Data Formatting for File
         String record = String.format("[%s] ROLE: %s | ID: %s | INFO: %s | DUR: %s | DEADLINE: %s\n",
                 timestamp, role, idField.getText(), infoField.getText(), 
                 durationField.getText(), deadlineField.getText());
@@ -120,7 +120,7 @@ public class createPanel implements ActionListener {
         }
     }
 
-    // Integrated Clock Component [cite: 42, 72]
+    // Integrated Clock Component
     static class LiveClockPanel extends JPanel {
         private JLabel clockLabel;
         public LiveClockPanel() {
