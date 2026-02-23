@@ -1,5 +1,4 @@
 import java.awt.*;
-import java.awt.event.*;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
@@ -8,7 +7,7 @@ import java.time.format.DateTimeFormatter;
 import javax.swing.*;
 import javax.swing.text.*;
 
-public class CreatePanel { // 1) Class name PascalCase
+public class createPanel { // 1) Class name PascalCase
     private static final DateTimeFormatter TS_FMT =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
@@ -16,7 +15,7 @@ public class CreatePanel { // 1) Class name PascalCase
     private JToggleButton roleToggle;
     private JFrame frame;
 
-    public CreatePanel() {
+    public createPanel() {
         frame = new JFrame("VCRTS - Cloud Console");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setSize(900, 600);
@@ -252,6 +251,6 @@ public class CreatePanel { // 1) Class name PascalCase
 
     public static void main(String[] args) {
         // 14) Build UI on EDT
-        SwingUtilities.invokeLater(CreatePanel::new);
+        SwingUtilities.invokeLater(createPanel::new);
     }
 }
