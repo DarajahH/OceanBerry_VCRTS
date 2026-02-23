@@ -199,7 +199,7 @@ public class createPanel { // 1) Class name PascalCase
                     StandardOpenOption.WRITE,
                     StandardOpenOption.APPEND
             );
-            JOptionPane.showMessageDialog(frame, "Transaction stored successfully!");
+            JOptionPane.showMessageDialog(frame,"Transaction stored successfully!\n\n" + record);
 
             idField.setText("");
             infoField.setText("");
