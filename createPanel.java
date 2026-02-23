@@ -14,7 +14,7 @@ public class createPanel implements ActionListener {
 
     public createPanel() {
 
-        // Main Frame Setup [cite: 1, 22]
+        // Main Frame Setup
         frame = new JFrame("VCRTS - Cloud Console");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setSize(900, 600);
@@ -51,9 +51,10 @@ public class createPanel implements ActionListener {
         // Input Fields
         int labelX = 100, fieldX = 300, startY = 120, spacing = 50;
 
-        // Tongle for Role Selection (Owner vs Client) [cite: 15, 33]
+        // Tongle for Role Selection (Owner vs Client)
         addStyledLabel(glassPanel, "User Role:", labelX, startY);
 
+        // Using JToggleButton for role selection to enhance UX
         roleToggle = new JToggleButton("OWNER");
         roleToggle.setBounds(fieldX, startY, 200, 35);
         roleToggle.setFocusPainted(false);
@@ -156,7 +157,7 @@ public class createPanel implements ActionListener {
             }
         }
 
-        // Data Formatting for File [cite: 7, 64]
+        // Data Formatting for File
         String deadlineValue = role.equals("Owner") ? "N/A" : deadlineField.getText().trim();
         String timestamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
 
@@ -181,7 +182,7 @@ public class createPanel implements ActionListener {
         }
     }
  
-    // Integrated Clock Component [cite: 42, 72]
+    // Integrated Clock Component
     static class LiveClockPanel extends JPanel {
         private JLabel clockLabel;
         public LiveClockPanel() {
