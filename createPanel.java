@@ -15,7 +15,20 @@ public class createPanel { // 1) Class name PascalCase
     private JToggleButton roleToggle;
     private JFrame frame;
 
-    public createPanel() {
+    public CreatePanel() {
+
+        JTabbedPane tabbedPane = new JTabbedPane();
+        tabbedPane.setFont(new Font("Helvetica Neue", Font.BOLD, 12));
+
+        JPanel formPanel = createFormPanel(); 
+        tabbedPane.addTab("Registration", formPanel);
+
+        // JPanel ownerDashboard = createOwnerDashboard();
+        // tabbedPane.addTab("Owner Monitor", ownerDashboard);
+
+        // JPanel jobDashboard = createJobDashboard();
+        // tabbedPane.addTab("Job Console", jobDashboard);
+
         frame = new JFrame("VCRTS - Cloud Console");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setSize(900, 600);
@@ -118,16 +131,17 @@ public class createPanel { // 1) Class name PascalCase
         submitBtn.addActionListener(evt -> handleSubmit());
         glassPanel.add(submitBtn);
 
-        frame.add(glassPanel);
+        frame.add(tabbedPane);
         frame.setVisible(true);
     }
 
-    private void addStyledLabel(JPanel panel, String text, int x, int y) {
+    private JLabel addStyledLabel(JPanel panel, String text, int x, int y) {
         JLabel label = new JLabel(text);
         label.setForeground(new Color(200, 200, 200));
         label.setFont(new Font("Helvetica Neue", Font.PLAIN, 14));
         label.setBounds(x, y, 200, 30);
         panel.add(label);
+        return label;
     }
 
     // 7) Extract submit logic (minimal change, but cleaner)
@@ -209,6 +223,112 @@ public class createPanel { // 1) Class name PascalCase
         } catch (IOException ex) {
             JOptionPane.showMessageDialog(frame, "Error saving to file: " + ex.getMessage());
         }
+    }
+
+    private JPanel createFormPanel() {
+        // Main container with the "Glass" effect from your original code
+        JPanel panel = new JPanel(null) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2d.setColor(new Color(255, 255, 255, 30));
+                g2d.fillRoundRect(20, 20, getWidth() - 40, getHeight() - 40, 30, 30);
+                g2d.dispose();
+            }
+        };
+        panel.setOpaque(false);
+
+        int labelX = 50, fieldX = 250, startY = 50, spacing = 45;
+
+        // --- Role Selection (Owner / Client / Job Owner) ---
+        addStyledLabel(panel, "Select Role:", labelX, startY);
+        String[] roles = {"VEHICLE OWNER", "CLIENT", "JOB OWNER"};
+        JComboBox<String> roleCombo = new JComboBox<>(roles);
+        roleCombo.setBounds(fieldX, startY, 250, 30);
+        panel.add(roleCombo);
+
+        // --- ID Field (Requirement: Owner ID / Client ID) ---
+        JLabel idLabel = addStyledLabel(panel, "User/Owner ID:", labelX, startY + spacing);
+        JTextField idField = new JTextField();
+        idField.setBounds(fieldX, startY + spacing, 250, 30);
+        panel.add(idField);
+
+        // --- Info Field (Requirement: Vehicle Info / Job Description) ---
+        JLabel infoLabel = addStyledLabel(panel, "Info / Description:", labelX, startY + (spacing * 2));
+        JTextField infoField = new JTextField();
+        infoField.setBounds(fieldX, startY + (spacing * 2), 250, 30);
+        panel.add(infoField);
+
+        // --- Duration & Deadline (Requirement: Residency Time / Job Deadline) ---
+        JLabel durationLabel = addStyledLabel(panel, "Duration (Hrs):", labelX, startY + (spacing * 3));
+        JTextField durationField = new JTextField();
+        durationField.setBounds(fieldX, startY + (spacing * 3), 100, 30);
+        panel.add(durationField);
+
+        JLabel deadlineLabel = addStyledLabel(panel, "Deadline (Hrs):", labelX, startY + (spacing * 4));
+        JTextField deadlineField = new JTextField();
+        deadlineField.setBounds(fieldX, startY + (spacing * 4), 100, 30);
+        panel.add(deadlineField);
+
+        // --- Cost/Payout (Requirement: Payout Info / Cost for Job) ---
+        JLabel costLabel = addStyledLabel(panel, "Target Cost/Payout ($):", labelX, startY + (spacing * 5));
+        JTextField costField = new JTextField();
+        costField.setBounds(fieldX, startY + (spacing * 5), 250, 30);
+        panel.add(costField);
+
+
+        // --- Submit Button ---
+        JButton actionBtn = new JButton("Submit to VCRTS Cloud");
+        actionBtn.setBounds(fieldX, startY + (spacing * 6), 250, 45);
+        actionBtn.setForeground(Color.DARK_GRAY);
+        actionBtn.setFont(new Font("Helvetica Neue", Font.BOLD, 14));
+        panel.add(actionBtn);
+
+
+        // --- Dynamic Behavior Logic ---
+        roleCombo.addActionListener(e -> {
+            String selected = (String) roleCombo.getSelectedItem();
+        
+            if ("VEHICLE OWNER".equals(selected)) {
+                idLabel.setText("Owner ID:");
+                infoLabel.setText("Vehicle Model/Plate:");
+                costField.setVisible(true);
+                costLabel.setVisible(true);
+                durationField.setVisible(true);
+                durationLabel.setVisible(true);
+                deadlineLabel.setVisible(false);
+                deadlineField.setVisible(false);
+                actionBtn.setText("Register Vehicle");
+                actionBtn.setBackground(new Color(52, 199, 89));
+            } else if ("CLIENT".equals(selected)) {
+                idLabel.setText("Client ID:");
+                infoLabel.setText("Job Category:");
+                deadlineLabel.setVisible(true);
+                deadlineField.setVisible(true);
+                costField.setVisible(false);
+                costLabel.setVisible(false);
+                durationField.setVisible(false);
+                durationLabel.setVisible(false);
+                actionBtn.setText("Submit Job Request");
+                actionBtn.setBackground(new Color(0, 122, 255));
+            } else { // JOB OWNER
+                idLabel.setText("Job Owner ID:");
+                infoLabel.setText("Job Description:");
+                deadlineLabel.setVisible(true);
+                deadlineField.setVisible(true);
+                costField.setVisible(false);
+                costLabel.setVisible(false);
+                durationField.setVisible(false);
+                durationLabel.setVisible(false);
+                actionBtn.setText("Submit New Job");
+                actionBtn.setBackground(new Color(175, 82, 222));
+            }
+            panel.repaint(); // Refresh the glass effect
+
+        });
+
+        return panel;
     }
 
     private static String sanitizeOneLine(String s) {
