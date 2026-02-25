@@ -8,26 +8,34 @@ import java.util.List;
 import javax.swing.*;
 import javax.swing.text.*;
 
+/**
+ * VCRTS Cloud Admin Powerhouse
+ * Student Note: This class handles the GUI and File I/O for Milestone 2.
+ */
 public class createPanel {
     private static final DateTimeFormatter TS_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final String LOG_FILE = "vcrts_log.txt";
 
     private JTextField idField, infoField, durationField, deadlineField;
-    private JLabel idLabel, infoLabel, durLabel, deadlineLabel;
+    private JLabel idLabel, infoLabel, durLabel, deadlineLabel, adminInstruction;
     private JComboBox<String> roleSelector; 
     private JTextArea dashboardArea; 
     private JButton approveBtn, rejectBtn, submitBtn;
     private JFrame frame;
+    private JPanel welcomeOverlay;
 
     public createPanel() {
-        // Initial setup
-        frame = new JFrame("VCRTS - Cloud Management & Admin Console");
+        frame = new JFrame("VCRTS - Cloud Admin Powerhouse");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setSize(1150, 750);
-        frame.setLayout(new BorderLayout());
-        frame.getContentPane().setBackground(new Color(18, 18, 18));
+        frame.setSize(1200, 800);
+        frame.setLayout(null); 
+        frame.getContentPane().setBackground(new Color(10, 10, 10));
 
-        // Glass UI Design
+        // --- 1. WELCOME OVERLAY ---
+        // Student Note: This provides the "Welcome Screen" requirement.
+        createWelcomeOverlay();
+
+        // --- 2. MAIN DASHBOARD CONTENT ---
         JPanel mainContent = new JPanel() {
             @Override
             protected void paintComponent(Graphics g) {
@@ -41,139 +49,176 @@ public class createPanel {
         };
         mainContent.setOpaque(false);
         mainContent.setLayout(null);
+        mainContent.setBounds(0, 0, 1200, 800);
 
-        // UI Header
+        // Header and Clock
         JLabel title = new JLabel("VCRTS CLOUD CONTROL CENTER");
         title.setForeground(Color.WHITE);
-        title.setFont(new Font("Helvetica Neue", Font.BOLD, 30));
-        title.setBounds(50, 45, 600, 40);
+        title.setFont(new Font("Helvetica Neue", Font.BOLD, 32));
+        title.setBounds(50, 45, 650, 40);
         mainContent.add(title);
 
         LiveClockPanel clock = new LiveClockPanel();
-        clock.setBounds(900, 45, 200, 40);
+        clock.setBounds(950, 45, 200, 40);
         mainContent.add(clock);
 
-        // Sidebar Configuration
+        // --- 3. INPUT FIELDS ---
         int lx = 60, fx = 250, sy = 130, sp = 55;
 
-        addStyledLabel(mainContent, "Selected Role:", lx, sy);
+        addStyledLabel(mainContent, "Switch User Role:", lx, sy);
         roleSelector = new JComboBox<>(new String[]{"OWNER", "CLIENT", "ADMIN"});
-        roleSelector.setBounds(fx, sy, 220, 35);
+        roleSelector.setBounds(fx, sy, 240, 35);
         mainContent.add(roleSelector);
 
-        idLabel = addStyledLabel(mainContent, "User ID:", lx, sy + sp);
+        adminInstruction = new JLabel("<html><i>Admin Mode: Decision power active.</i></html>");
+        adminInstruction.setForeground(Color.CYAN);
+        adminInstruction.setBounds(fx, sy + 35, 240, 20);
+        adminInstruction.setVisible(false);
+        mainContent.add(adminInstruction);
+
+        idLabel = addStyledLabel(mainContent, "Owner ID:", lx, sy + sp);
         idField = new JTextField();
-        idField.setBounds(fx, sy + sp, 220, 30);
+        idField.setBounds(fx, sy + sp, 240, 30);
         mainContent.add(idField);
 
-        infoLabel = addStyledLabel(mainContent, "Information:", lx, sy + (sp * 2));
+        infoLabel = addStyledLabel(mainContent, "Vehicle Info:", lx, sy + (sp * 2));
         infoField = new JTextField();
-        infoField.setBounds(fx, sy + (sp * 2), 220, 30);
+        infoField.setBounds(fx, sy + (sp * 2), 240, 30);
         mainContent.add(infoField);
 
-        durLabel = addStyledLabel(mainContent, "Duration (Hrs):", lx, sy + (sp * 3));
+        durLabel = addStyledLabel(mainContent, "Residency (Hrs):", lx, sy + (sp * 3));
         durationField = new JTextField();
-        durationField.setBounds(fx, sy + (sp * 3), 220, 30);
+        durationField.setBounds(fx, sy + (sp * 3), 240, 30);
+        // Student Note: DigitsOnlyFilter prevents invalid non-numeric input.
         ((AbstractDocument) durationField.getDocument()).setDocumentFilter(new DigitsOnlyFilter());
         mainContent.add(durationField);
 
-        deadlineLabel = addStyledLabel(mainContent, "Deadline:", lx, sy + (sp * 4));
+        deadlineLabel = addStyledLabel(mainContent, "Job Deadline:", lx, sy + (sp * 4));
         deadlineField = new JTextField(); 
-        deadlineField.setBounds(fx, sy + (sp * 4), 220, 30);
-        deadlineField.setEnabled(false); 
+        deadlineField.setBounds(fx, sy + (sp * 4), 240, 30);
+        deadlineField.setVisible(false); // Hidden for Owners
         ((AbstractDocument) deadlineField.getDocument()).setDocumentFilter(new DigitsOnlyFilter());
         mainContent.add(deadlineField);
 
-        // ADMIN POWERHOUSE BUTTONS (Approve/Reject)
+        // --- 4. ACTION BUTTONS ---
         approveBtn = new JButton("APPROVE REQUEST");
-        approveBtn.setBounds(fx, sy + (sp * 5), 220, 35);
+        approveBtn.setBounds(fx, sy + (sp * 5), 240, 35);
         approveBtn.setBackground(new Color(52, 199, 89));
-        approveBtn.setVisible(false); // Only for Admin
+        approveBtn.setVisible(false);
         mainContent.add(approveBtn);
 
         rejectBtn = new JButton("REJECT REQUEST");
-        rejectBtn.setBounds(fx, sy + (sp * 5) + 40, 220, 35);
+        rejectBtn.setBounds(fx, sy + (sp * 5) + 40, 240, 35);
         rejectBtn.setBackground(new Color(255, 59, 48));
-        rejectBtn.setVisible(false); // Only for Admin
+        rejectBtn.setVisible(false);
         mainContent.add(rejectBtn);
 
-        // Submit Button (For Owners/Clients)
         submitBtn = new JButton("Submit to Cloud");
-        submitBtn.setBounds(fx, sy + (sp * 6), 220, 45);
+        submitBtn.setBounds(fx, sy + (sp * 6), 240, 45);
         mainContent.add(submitBtn);
 
-        // DATABASE DASHBOARD
-        addStyledLabel(mainContent, "Live Database Monitor:", 550, 100);
+        // --- 5. DATABASE MONITOR ---
+        // Student Note: This displays the vcrts_log.txt content in real-time.
+        addStyledLabel(mainContent, "Global Cloud Database Monitor:", 550, 100);
         dashboardArea = new JTextArea();
         dashboardArea.setEditable(false);
-        dashboardArea.setBackground(new Color(10, 10, 10));
-        dashboardArea.setForeground(new Color(0, 255, 100));
+        dashboardArea.setBackground(new Color(5, 5, 5));
+        dashboardArea.setForeground(new Color(50, 255, 100));
         dashboardArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
         JScrollPane scroll = new JScrollPane(dashboardArea);
-        scroll.setBounds(550, 130, 520, 500);
+        scroll.setBounds(550, 130, 580, 550);
         mainContent.add(scroll);
 
-        // Role Logic
+        // Listeners
         roleSelector.addActionListener(e -> updateUI((String)roleSelector.getSelectedItem()));
+        submitBtn.addActionListener(e -> handleAction("SUBMITTED"));
+        approveBtn.addActionListener(e -> handleAction("APPROVED"));
+        rejectBtn.addActionListener(e -> handleAction("REJECTED"));
 
-        // Actions
-        submitBtn.addActionListener(e -> processEntry("SUBMITTED"));
-        approveBtn.addActionListener(e -> processEntry("APPROVED"));
-        rejectBtn.addActionListener(e -> processEntry("REJECTED"));
-
+        frame.add(welcomeOverlay);
         frame.add(mainContent);
+        
         frame.setVisible(true);
-
-        loadDatabase(); // Synchronize with txt file
-        showWelcomeMessage(); 
+        loadDatabase();
     }
 
-    private void showWelcomeMessage() {
-        JOptionPane.showMessageDialog(frame, 
-            "Welcome to the VCRTS Cloud Management System.\nAccess levels: Owner, Client, and Admin Powerhouse.", 
-            "System Login Successful", JOptionPane.INFORMATION_MESSAGE);
+    private void createWelcomeOverlay() {
+        welcomeOverlay = new JPanel();
+        welcomeOverlay.setBounds(0, 0, 1200, 800);
+        welcomeOverlay.setBackground(new Color(15, 15, 15, 250));
+        welcomeOverlay.setLayout(new GridBagLayout());
+        
+        JPanel card = new JPanel();
+        card.setPreferredSize(new Dimension(500, 300));
+        card.setBackground(new Color(30, 30, 30));
+        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
+        card.setBorder(BorderFactory.createLineBorder(Color.WHITE, 1));
+
+        JLabel welcomeTitle = new JLabel("WELCOME TO VCRTS");
+        welcomeTitle.setAlignmentX(Component.CENTER_ALIGNMENT);
+        welcomeTitle.setFont(new Font("Helvetica Neue", Font.BOLD, 32));
+        welcomeTitle.setForeground(Color.WHITE);
+
+        // Student Note: Button updated with Black Text for clarity.
+        JButton enterBtn = new JButton("ENTER CONSOLE");
+        enterBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
+        enterBtn.setBackground(Color.WHITE);
+        enterBtn.setForeground(Color.BLACK); // Set text to black
+        enterBtn.setFocusPainted(false);
+        enterBtn.setFont(new Font("Helvetica Neue", Font.BOLD, 14));
+        enterBtn.addActionListener(e -> {
+            welcomeOverlay.setVisible(false);
+            frame.repaint();
+        });
+
+        card.add(Box.createVerticalGlue());
+        card.add(welcomeTitle);
+        card.add(Box.createVerticalStrut(40));
+        card.add(enterBtn);
+        card.add(Box.createVerticalGlue());
+
+        welcomeOverlay.add(card);
     }
 
     private void updateUI(String role) {
         boolean isAdmin = role.equals("ADMIN");
         boolean isClient = role.equals("CLIENT");
 
-        idLabel.setText(isClient ? "Client ID:" : (isAdmin ? "Admin ID:" : "Owner ID:"));
-        infoLabel.setText(isClient ? "Job Desc:" : "Vehicle Info:");
-        durLabel.setText(isClient ? "Job Dur (Hrs):" : "Residency (Hrs):");
+        idLabel.setText(isClient ? "Client ID:" : (isAdmin ? "Target ID:" : "Owner ID:"));
+        infoLabel.setText(isClient ? "Job Desc:" : (isAdmin ? "Review Info:" : "Vehicle Info:"));
+        durLabel.setText(isClient ? "Job Dur (Hrs):" : "Time (Hrs):");
         
-        deadlineField.setEnabled(isClient);
-        if (!isClient) deadlineField.setText("");
-
-        // Admin controls visibility
+        deadlineLabel.setVisible(isClient);
+        deadlineField.setVisible(isClient);
+        adminInstruction.setVisible(isAdmin);
         approveBtn.setVisible(isAdmin);
         rejectBtn.setVisible(isAdmin);
         submitBtn.setVisible(!isAdmin);
     }
 
-    private void processEntry(String status) {
+    private void handleAction(String status) {
         String role = (String)roleSelector.getSelectedItem();
         String id = idField.getText().trim();
         String info = infoField.getText().trim();
         String dur = durationField.getText().trim();
-        String deadline = role.equals("CLIENT") ? deadlineField.getText().trim() : "N/A";
+        String deadline = "CLIENT".equals(role) ? deadlineField.getText().trim() : "N/A";
 
         if (id.isEmpty() || info.isEmpty() || dur.isEmpty()) {
-            JOptionPane.showMessageDialog(frame, "Error: Fill all fields.");
+            JOptionPane.showMessageDialog(frame, "Please enter all information.");
             return;
         }
 
         String ts = LocalDateTime.now().format(TS_FMT);
-        // Requirement Format: ROLE | ID | INFO | DUR | DEADLINE | STATUS
         String entry = String.format("[%s] ROLE: %s | ID: %s | INFO: %s | DUR: %s | DEADLINE: %s | STATUS: %s", 
                                      ts, role, id, info, dur, deadline, status);
 
         try {
+            // Student Note: Files.writeString handles the File I/O for the database.
             Files.writeString(Paths.get(LOG_FILE), entry + System.lineSeparator(), 
                               StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
-            loadDatabase(); // Refresh visual log
+            loadDatabase();
             clearInputs();
-        } catch (IOException ex) { JOptionPane.showMessageDialog(frame, "Database write error."); }
+        } catch (IOException ex) { JOptionPane.showMessageDialog(frame, "Error saving to cloud."); }
     }
 
     private void loadDatabase() {
@@ -184,7 +229,7 @@ public class createPanel {
                 List<String> logs = Files.readAllLines(path, StandardCharsets.UTF_8);
                 for (String log : logs) dashboardArea.append(log + "\n");
             }
-        } catch (IOException e) { dashboardArea.setText("Unable to sync database."); }
+        } catch (IOException e) { dashboardArea.setText("Database Connection Error."); }
     }
 
     private void clearInputs() {
@@ -193,14 +238,13 @@ public class createPanel {
 
     private JLabel addStyledLabel(JPanel panel, String text, int x, int y) {
         JLabel label = new JLabel(text);
-        label.setForeground(new Color(180, 180, 180));
+        label.setForeground(new Color(200, 200, 200));
         label.setFont(new Font("Helvetica Neue", Font.PLAIN, 14));
         label.setBounds(x, y, 180, 30);
         panel.add(label);
         return label;
     }
 
-    // Input Filter Class
     static class DigitsOnlyFilter extends DocumentFilter {
         @Override
         public void insertString(FilterBypass fb, int offset, String string, AttributeSet attr) throws BadLocationException {
@@ -212,7 +256,6 @@ public class createPanel {
         }
     }
 
-    // Live Clock Component
     static class LiveClockPanel extends JPanel {
         public LiveClockPanel() {
             setOpaque(false);
