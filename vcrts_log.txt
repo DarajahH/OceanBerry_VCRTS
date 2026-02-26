@@ -1,3 +1,4 @@
 [2026-02-22 20:31:21] ROLE: Owner | ID: 123456789 | INFO: 1999 Mercedes e320 | DUR: 12 | DEADLINE: N/A
-[2026-02-22 20:38:29] ROLE: Owner | ID: Phillip | INFO: 1999 mercedes e320 | DUR: 50 | DEADLINE: N/A
-[2026-02-22 20:39:38] ROLE: Owner | ID: V | INFO: 2077 rayban caliburn | DUR: 150 | DEADLINE: N/A
+[2026-02-22 20:38:29] ROLE: Owner | ID: Adam | INFO: 1999 mercedes e320 | DUR: 50 | DEADLINE: N/A
+
+[2026-02-25 16:24:57] ROLE: ADMIN | ID: admin | INFO: 1999 mercedes e320 | DUR: 120 | DEADLINE: N/A | STATUS: APPROVED
