@@ -22,6 +22,9 @@ import javax.swing.JTextField;
 import javax.swing.table.DefaultTableModel;
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
 import java.io.IOException;
 import java.util.List;
 
@@ -119,14 +122,38 @@ public class AdminDashboardPanel extends JPanel {
         JPanel panel = new JPanel(new BorderLayout(8, 8));
         panel.add(new JScrollPane(usersTable), BorderLayout.CENTER);
 
-        JPanel form = new JPanel();
-        form.setLayout(new javax.swing.BoxLayout(form, javax.swing.BoxLayout.Y_AXIS));
-        form.add(new JLabel("Username:"));
-        form.add(usernameField);
-        form.add(new JLabel("Password:"));
-        form.add(passwordField);
-        form.add(new JLabel("Role:"));
-        form.add(roleCombo);
+        JPanel form = new JPanel(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(6, 6, 6, 6);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.anchor = GridBagConstraints.WEST;
+
+        int row = 0;
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        gbc.weightx = 0;
+        form.add(new JLabel("Username:"), gbc);
+        gbc.gridx = 1;
+        gbc.weightx = 1;
+        form.add(usernameField, gbc);
+
+        row++;
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        gbc.weightx = 0;
+        form.add(new JLabel("Password:"), gbc);
+        gbc.gridx = 1;
+        gbc.weightx = 1;
+        form.add(passwordField, gbc);
+
+        row++;
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        gbc.weightx = 0;
+        form.add(new JLabel("Role:"), gbc);
+        gbc.gridx = 1;
+        gbc.weightx = 1;
+        form.add(roleCombo, gbc);
 
         JButton addButton = new JButton("Add User");
         JButton removeButton = new JButton("Remove User");
@@ -136,9 +163,20 @@ public class AdminDashboardPanel extends JPanel {
         removeButton.addActionListener(e -> removeSelectedUser());
         refreshButton.addActionListener(e -> refreshUsers());
 
-        form.add(addButton);
-        form.add(removeButton);
-        form.add(refreshButton);
+        row++;
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        gbc.gridwidth = 2;
+        gbc.weightx = 1;
+        form.add(addButton, gbc);
+
+        row++;
+        gbc.gridy = row;
+        form.add(removeButton, gbc);
+
+        row++;
+        gbc.gridy = row;
+        form.add(refreshButton, gbc);
 
         panel.add(form, BorderLayout.EAST);
         return panel;

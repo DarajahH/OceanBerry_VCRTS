@@ -22,7 +22,7 @@ public final class Main {
 
     private static void configureLookAndFeel() {
         try {
-            Class<?> lafClass = Class.forName("com.formdev.flatlaf.FlatLightLaf");
+            Class<?> lafClass = Class.forName("com.formdev.flatlaf.FlatDarkLaf");
             Method setup = lafClass.getMethod("setup");
             setup.invoke(null);
         } catch (Throwable ignored) {

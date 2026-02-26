@@ -1,5 +1,6 @@
 package panels;
 
+import models.Role;
 import models.User;
 import services.AuthService;
 import services.JobService;
@@ -91,11 +92,18 @@ public class LoginScreen {
         panel.add(passField);
 
         JButton loginBtn = new JButton("SIGN IN");
-        loginBtn.setBounds(160, 180, 120, 40);
+        loginBtn.setBounds(160, 180, 180, 40);
         loginBtn.setBackground(new Color(52, 199, 89));
         loginBtn.setForeground(Color.BLACK);
         loginBtn.setFocusPainted(false);
         panel.add(loginBtn);
+
+        JButton registerBtn = new JButton("REGISTER");
+        registerBtn.setBounds(160, 230, 180, 40);
+        registerBtn.setBackground(new Color(10, 132, 255));
+        registerBtn.setForeground(Color.WHITE);
+        registerBtn.setFocusPainted(false);
+        panel.add(registerBtn);
 
         loginBtn.addActionListener(e -> {
             String user = userField.getText().trim();
@@ -113,8 +121,101 @@ public class LoginScreen {
             }
         });
 
+        registerBtn.addActionListener(e -> showRegistrationDialog(userField, passField));
+
         frame.add(panel);
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
+    }
+
+    private void showRegistrationDialog(JTextField loginUserField, JPasswordField loginPassField) {
+        JTextField usernameField = new JTextField(16);
+        JPasswordField passwordField = new JPasswordField(16);
+        JPasswordField confirmField = new JPasswordField(16);
+        JComboBox<String> roleCombo = new JComboBox<>(new String[]{
+                "Client (Job Submitter)",
+                "Vehicle Owner"
+        });
+
+        JPanel form = new JPanel(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(6, 6, 6, 6);
+        gbc.anchor = GridBagConstraints.WEST;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+
+        int row = 0;
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        form.add(new JLabel("Username:"), gbc);
+        gbc.gridx = 1;
+        form.add(usernameField, gbc);
+
+        row++;
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        form.add(new JLabel("Password:"), gbc);
+        gbc.gridx = 1;
+        form.add(passwordField, gbc);
+
+        row++;
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        form.add(new JLabel("Confirm Password:"), gbc);
+        gbc.gridx = 1;
+        form.add(confirmField, gbc);
+
+        row++;
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        form.add(new JLabel("Register As:"), gbc);
+        gbc.gridx = 1;
+        form.add(roleCombo, gbc);
+
+        while (true) {
+            int choice = JOptionPane.showConfirmDialog(
+                    frame,
+                    form,
+                    "Create Account",
+                    JOptionPane.OK_CANCEL_OPTION,
+                    JOptionPane.PLAIN_MESSAGE);
+
+            if (choice != JOptionPane.OK_OPTION) {
+                return;
+            }
+
+            String username = usernameField.getText().trim();
+            String password = new String(passwordField.getPassword());
+            String confirm = new String(confirmField.getPassword());
+
+            if (username.isEmpty() || password.isEmpty() || confirm.isEmpty()) {
+                JOptionPane.showMessageDialog(frame, "All registration fields are required.");
+                continue;
+            }
+
+            if (!password.equals(confirm)) {
+                JOptionPane.showMessageDialog(frame, "Passwords do not match.");
+                continue;
+            }
+
+            Role selectedRole = "Vehicle Owner".equals(roleCombo.getSelectedItem())
+                    ? Role.VEHICLE_OWNER
+                    : Role.JOB_SUBMITTER;
+
+            boolean created = authService.addUser(
+                    authService.nextUserId(),
+                    username,
+                    password,
+                    selectedRole);
+
+            if (!created) {
+                JOptionPane.showMessageDialog(frame, "Could not create account. Username may already exist.");
+                continue;
+            }
+
+            loginUserField.setText(username);
+            loginPassField.setText(password);
+            JOptionPane.showMessageDialog(frame, "Account created. You can now sign in.");
+            return;
+        }
     }
 }
