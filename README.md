@@ -8,16 +8,22 @@ https://docs.google.com/document/d/16k-REOj50g5DmJLSiEPO1bqi5zENigJPWOGzb3z3RNc/
 
 Compile:
 ```bash
-javac *.java
+javac -d bin $(find src -name "*.java")
 ```
 
 Run:
 ```bash
-java Main
+java -cp bin app.Main
 ```
 
 If using FlatLaf jar:
 ```bash
-javac -cp ".:flatlaf-3.7.jar" *.java
-java -cp ".:flatlaf-3.7.jar" Main
+javac -cp ".:flatlaf-3.7.jar" -d bin $(find src -name "*.java")
+java -cp "bin:flatlaf-3.7.jar" app.Main
 ```
+
+Seeded accounts:
+- `admin / 1234` (`ADMIN`)
+- `owner / owner123` (`OWNER`)
+- `client / client123` (`CLIENT`)
+- `jobowner / job123` (`JOB_OWNER`)

@@ -12,6 +12,8 @@
 
 # Package Files #
 *.jar
+!flatlaf-*.jar
+
 *.war
 *.nar
 *.ear

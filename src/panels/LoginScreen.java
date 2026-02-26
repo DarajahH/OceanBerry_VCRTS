@@ -1,12 +1,36 @@
 package panels;
 
+import models.User;
+import services.AuthService;
+import services.JobService;
+import services.VehicleService;
+
 import javax.swing.*;
 import java.awt.*;
+import java.util.Optional;
 
 public class LoginScreen {
     private final JFrame frame;
+    private final AuthService authService;
+    private final JobService jobService;
+    private final VehicleService vehicleService;
 
     public LoginScreen() {
+        this(AuthService.withSeedUsers(), new JobService(), new VehicleService());
+    }
+
+    public LoginScreen(AuthService authService) {
+        this(authService, new JobService(), new VehicleService());
+    }
+
+    public LoginScreen(AuthService authService, JobService jobService) {
+        this(authService, jobService, new VehicleService());
+    }
+
+    public LoginScreen(AuthService authService, JobService jobService, VehicleService vehicleService) {
+        this.authService = authService;
+        this.jobService = jobService;
+        this.vehicleService = vehicleService;
         frame = new JFrame("VCRTS Login Portal");
         frame.setSize(700, 600);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -36,8 +60,9 @@ public class LoginScreen {
 
         JLabel description = new JLabel(
                 "<html>VCRTS is a vehicular cloud transaction console system.<br>" +
-                "It allows owners to register vehicles, clients to submit jobs,<br>" +
-                "and administrators to monitor transactions.<br><br>" +
+                "It allows vehicle owners to register up to 3 vehicles,<br>" +
+                "job submitters to create and track jobs, job controllers<br>" +
+                "to adjust queue order, and system admins to manage all.<br><br>" +
                 "This project demonstrates GUI interaction and persistent<br>" +
                 "transaction logging using file storage.</html>"
         );
@@ -76,9 +101,10 @@ public class LoginScreen {
             String user = userField.getText().trim();
             String pass = new String(passField.getPassword());
 
-            if ("admin".equals(user) && "1234".equals(pass)) {
+            Optional<User> authenticated = authService.authenticate(user, pass);
+            if (authenticated.isPresent()) {
                 frame.dispose();
-                new createPanel();
+                new MainScreen(authenticated.get(), authService, jobService, vehicleService);
             } else {
                 JOptionPane.showMessageDialog(frame,
                         "Invalid Credentials",

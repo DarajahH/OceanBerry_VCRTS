@@ -1,0 +1,13 @@
+package models;
+
+public enum Permission {
+    VIEW_OWN_VEHICLES,
+    REGISTER_VEHICLE,
+    SUBMIT_JOBS,
+    TRACK_OWN_JOBS,
+    VIEW_ALL_JOBS,
+    ADJUST_JOB_QUEUE,
+    MANAGE_USERS,
+    MANAGE_VEHICLES,
+    MANAGE_JOBS
+}
