@@ -1,32 +1,13 @@
 package panels.roles;
 
-import models.Job;
-import models.Role;
-import models.User;
-import models.Vehicle;
-import panels.DashboardPanel;
-import services.AuthService;
-import services.CloudLogService;
-import services.JobService;
-import services.VehicleService;
-
-import javax.swing.JButton;
-import javax.swing.JComboBox;
-import javax.swing.JLabel;
-import javax.swing.JOptionPane;
-import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-import javax.swing.JTabbedPane;
-import javax.swing.JTable;
-import javax.swing.JTextField;
-import javax.swing.table.DefaultTableModel;
-import java.awt.BorderLayout;
-import java.awt.FlowLayout;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
-import java.awt.Insets;
+import java.awt.*;
 import java.io.IOException;
 import java.util.List;
+import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
+import models.*;
+import panels.DashboardPanel;
+import services.*;
 
 public class AdminDashboardPanel extends JPanel {
     private final User currentUser;

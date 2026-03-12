@@ -1,14 +1,13 @@
 package panels;
 
+import java.awt.*;
+import java.util.Optional;
+import javax.swing.*;
 import models.Role;
 import models.User;
 import services.AuthService;
 import services.JobService;
 import services.VehicleService;
-
-import javax.swing.*;
-import java.awt.*;
-import java.util.Optional;
 
 public class LoginScreen {
     private final JFrame frame;

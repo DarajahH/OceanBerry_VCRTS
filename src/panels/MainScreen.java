@@ -1,5 +1,16 @@
 package panels;
 
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import java.nio.file.Paths;
+import javax.swing.BorderFactory;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
 import models.Role;
 import models.User;
 import panels.main.MainHeaderPanel;
@@ -11,18 +22,6 @@ import services.AuthService;
 import services.CloudLogService;
 import services.JobService;
 import services.VehicleService;
-
-import javax.swing.BorderFactory;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JOptionPane;
-import javax.swing.JPanel;
-import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
-import java.awt.RenderingHints;
-import java.nio.file.Paths;
 
 public class MainScreen {
     private final JFrame frame;

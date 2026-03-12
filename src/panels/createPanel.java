@@ -14,6 +14,6 @@ public class createPanel {
         AuthService authService = AuthService.withSeedUsers();
         JobService jobService = new JobService();
         VehicleService vehicleService = new VehicleService();
-        new MainScreen(new User("legacy", "legacy", "", Role.SYSTEM_ADMIN), authService, jobService, vehicleService);
+        MainScreen mainScreen = new MainScreen(new User("legacy", "legacy", "", Role.SYSTEM_ADMIN), authService, jobService, vehicleService);
     }
 }
