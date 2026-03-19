@@ -1,4 +1,4 @@
-package panels;
+package views;
 
 import java.awt.*;
 import java.io.IOException;
@@ -8,7 +8,7 @@ import java.time.format.DateTimeFormatter;
 import javax.swing.*;
 import services.CloudDataService;
 
-public class createPanel {
+public class ConsolePanel {
     private final JFrame frame;
     private final JTextField idField, infoField, durField, deadlineField;
     private final JLabel idLabel, infoLabel, durLabel, deadlineLabel;
@@ -17,15 +17,18 @@ public class createPanel {
     private final CloudDataService service;
     private final DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss");
 
-    public createPanel() {
-        this.service = new CloudDataService(Paths.get("vcrts_log.txt"));
+    public ConsolePanel() {
+        this.service = new CloudDataService(
+            Paths.get("vcrts_log.txt"), 
+            Paths.get("users.txt")
+        );
         frame = new JFrame("VCRTS - Vehicular Cloud Console");
         frame.setSize(1000, 700);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setLayout(null);
         frame.getContentPane().setBackground(new Color(20, 20, 25));
 
-        // Role Selector (Requirement A)
+       // Role Selector (Requirement A)
         addLabel("Select Role:", 50, 30);
         roleBox = new JComboBox<>(new String[]{"OWNER", "CLIENT", "ADMIN"});
         roleBox.setBounds(200, 30, 200, 30);
@@ -104,7 +107,11 @@ public class createPanel {
         JOptionPane.showMessageDialog(frame, "Duration must be numeric (digits only).");
         return;
         }
+<<<<<<< HEAD:src/panels/createPanel.java
     
+=======
+        
+>>>>>>> dffe0a496c33e992768a729323fa35769afb403e:src/views/ConsolePanel.java
         String entry = String.format("[%s] ROLE:%s | ID:%s | INFO:%s | TIME:%s | DEADLINE:%s", 
                                      ts, role, idField.getText(), infoField.getText(), 
                                      durField.getText(), deadlineField.isVisible() ? deadlineField.getText() : "N/A");

@@ -6,12 +6,16 @@ import java.nio.file.*;
 import java.util.Collections;
 import java.util.List;
 
+//New Inserted Code
+
 public class CloudDataService {
     private final Path logPath;
-    private static final Path USER_FILE = Paths.get("users.txt");
+    private final Path userPath;
 
-    public CloudDataService(Path logPath) {
+    // Inject both paths via constructor for better flexibility
+    public CloudDataService(Path logPath, Path userPath) {
         this.logPath = logPath;
+        this.userPath = userPath;
     }
 
     // Requirement B: Storing info on a file
@@ -26,19 +30,21 @@ public class CloudDataService {
         return Files.readAllLines(logPath, StandardCharsets.UTF_8);
     }
 
-    public static void registerUser(String username, String password) throws IOException {
+    public void registerUser(String username, String password) throws IOException {
         String entry = username + ":" + password + System.lineSeparator();
-        Files.writeString(USER_FILE, entry, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+        Files.writeString(userPath, entry, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
     }
 
-    public static boolean validateUser(String username, String password) {
+    public boolean validateUser(String username, String password) {
         try {
-            if (!Files.exists(USER_FILE)) return false;
-            List<String> users = Files.readAllLines(USER_FILE);
+            if (!Files.exists(userPath)) return false;
+            List<String> users = Files.readAllLines(userPath);
             for (String line : users) {
                 if (line.equals(username + ":" + password)) return true;
             }
-        } catch (IOException e) { e.printStackTrace(); }
+        } catch (IOException e) { 
+            e.printStackTrace(); 
+        }
         return false;
     }
 }
