@@ -84,6 +84,27 @@ public class createPanel {
     private void saveEntry() {
         String ts = dtf.format(LocalDateTime.now());
         String role = (String) roleBox.getSelectedItem();
+
+        String id = idField.getText().trim();
+        String info = infoField.getText().trim();
+        String dur = durField.getText().trim();
+        String deadline = deadlineField.isVisible() ? deadlineField.getText().trim() : "N/A";
+
+        if (id.isEmpty() || info.isEmpty() || dur.isEmpty()) {
+            JOptionPane.showMessageDialog(frame, "Please enter all required fields.");
+            return;
+        }
+
+        if (!id.matches("\\d+")) {
+            JOptionPane.showMessageDialog(frame, "ID must be numeric (digits only).");
+            return;
+        }
+
+        if (!dur.matches("\\d+")) {
+        JOptionPane.showMessageDialog(frame, "Duration must be numeric (digits only).");
+        return;
+        }
+    
         String entry = String.format("[%s] ROLE:%s | ID:%s | INFO:%s | TIME:%s | DEADLINE:%s", 
                                      ts, role, idField.getText(), infoField.getText(), 
                                      durField.getText(), deadlineField.isVisible() ? deadlineField.getText() : "N/A");
