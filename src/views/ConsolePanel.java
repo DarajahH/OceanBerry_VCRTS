@@ -107,11 +107,7 @@ public class ConsolePanel {
         JOptionPane.showMessageDialog(frame, "Duration must be numeric (digits only).");
         return;
         }
-<<<<<<< HEAD:src/panels/createPanel.java
     
-=======
-        
->>>>>>> dffe0a496c33e992768a729323fa35769afb403e:src/views/ConsolePanel.java
         String entry = String.format("[%s] ROLE:%s | ID:%s | INFO:%s | TIME:%s | DEADLINE:%s", 
                                      ts, role, idField.getText(), infoField.getText(), 
                                      durField.getText(), deadlineField.isVisible() ? deadlineField.getText() : "N/A");
