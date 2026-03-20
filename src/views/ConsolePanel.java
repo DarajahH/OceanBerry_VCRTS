@@ -79,10 +79,61 @@ public class ConsolePanel {
         refreshMonitor();
     }
 
-    private Object calculateCompletionTimes() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'calculateCompletionTimes'");
+    private void calculateCompletionTimes() {
+        try{
+            java.util.List<String> logs = service.readClientLogs();
+            monitorArea.setText("");
+
+            int totalCompletionTime = 0;
+
+            for (String log : logs) {
+                String[] parts = log.split("\\|");
+                String id = "";
+                String info = "";
+                int duration = 0;
+                String deadline = "";
+
+                for (String part : parts){
+                    part = part.trim();
+
+                    if (part.contains("ID:")) {
+                        id = part.substring(part.indexOf("ID:") + 3).trim();
+                    } else if (part.contains("INFO:")) {
+                        info = part.substring(part.indexOf("INFO:") + 5).trim();
+                    } else if (part.contains("TIME:")) {
+                        String timeValue = part.substring(part.indexOf("TIME:") + 5).trim();
+                        duration = Integer.parseInt(timeValue);
+                    } else if (part.contains("DEADLINE:")){
+                        deadline = part.substring(part.indexOf("DEADLINE:") + 9 ).trim();  
+                    }
+                }
+
+                totalCompletionTime += duration;
+
+                monitorArea.append(
+                    "Client Job ID:" +id +
+                    " | Description:" + info +
+                    " | Duration:" + duration +
+                    " | Deadline:" + deadline + 
+                    " | Completion Time: " + totalCompletionTime + "\n"
+                );
+            } 
+
+            if (logs.isEmpty()){
+                monitorArea.setText("No client jobs found. \n");
+            }
+        } catch (IOException e) {
+            JOptionPane.showMessageDialog(frame, "File Error while calculating completion times.");
+
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(frame, "Invalid duration found in log file.");
+            }
     }
+
+        
+       
+       
+    
 
     private void adjustFields() {
         String role = (String) roleBox.getSelectedItem();
@@ -103,7 +154,7 @@ public class ConsolePanel {
         String id = idField.getText().trim();
         String info = infoField.getText().trim();
         String dur = durField.getText().trim();
-        String deadline = deadlineField.isVisible() ? deadlineField.getText().trim() : "N/A";
+        String deadline = deadlineField.getText().trim(); 
 
         if (id.isEmpty() || info.isEmpty() || dur.isEmpty()) {
             JOptionPane.showMessageDialog(frame, "Please enter all required fields.");
@@ -119,21 +170,33 @@ public class ConsolePanel {
         JOptionPane.showMessageDialog(frame, "Duration must be numeric (digits only).");
         return;
         }
+
+        if ("CLIENT".equals(role) && deadline.isEmpty()) {
+            JOptionPane.showMessageDialog(frame, "Client jobs must include a deadline");
+            return;
+        }
+
+        if (!"CLIENT".equals(role)) {
+            deadline = "N/A";
+        }
     
-        String entry = String.format("[%s] ROLE:%s | ID:%s | INFO:%s | TIME:%s | DEADLINE:%s", 
-                                     ts, role, idField.getText(), infoField.getText(), 
-                                     durField.getText(), deadlineField.isVisible() ? deadlineField.getText() : "N/A");
+        String entry = String.format(
+            "[%s] ROLE:%s | ID:%s | INFO:%s | TIME:%s | DEADLINE:%s",
+            ts, role, id, info, dur, deadline
+        );
         try {
             service.appendLog(entry);
             refreshMonitor();
             clear();
-        } catch (IOException e) { JOptionPane.showMessageDialog(frame, "File Error"); }
+        } catch (IOException e) { 
+            JOptionPane.showMessageDialog(frame, "File Error"); 
+        };
     }
 
     private void refreshMonitor() {
         try {
             monitorArea.setText("");
-            for (String line : service.readClientLogs()) monitorArea.append(line + "\n");
+            for (String line : service.readAllLogs()) monitorArea.append(line + "\n");
         } catch (IOException ignored) {}
     }
 
