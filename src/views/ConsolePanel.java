@@ -58,6 +58,13 @@ public class ConsolePanel {
         submitBtn.addActionListener(e -> saveEntry());
         frame.add(submitBtn);
 
+        JButton calcBtn = new JButton("Calculate Completion Time");
+        calcBtn.setBounds(50, 380, 350, 40);
+        calcBtn.addActionListener(e -> calculateCompletionTimes());
+        frame.add(calcBtn);
+
+
+
         // Monitor (Requirement C)
         monitorArea = new JTextArea();
         monitorArea.setEditable(false);
@@ -70,6 +77,11 @@ public class ConsolePanel {
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
         refreshMonitor();
+    }
+
+    private Object calculateCompletionTimes() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'calculateCompletionTimes'");
     }
 
     private void adjustFields() {
