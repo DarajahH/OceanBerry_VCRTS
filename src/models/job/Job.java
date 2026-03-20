@@ -3,49 +3,26 @@ package models.job;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
-import models.enums.JobStatus;
 
 public class Job {
     private static final Set<String> jobIdSet = new HashSet<>();
 
     private final String jobId;
-    private JobStatus status;
-    private int redundancyLevel;
-    private LocalDateTime deadline;
-    private String resultStatus;
-    private float progress;
+    private final int duration;
+    private final LocalDateTime deadline;
 
-    public Job(
-        String jobId,
-        JobStatus status,
-        int redundancyLevel,
-        LocalDateTime deadline,
-        String resultStatus
-    ) {
+    public Job(String jobId, int duration, LocalDateTime deadline) {
         this.jobId = jobId;
-        this.status = status;
-        this.redundancyLevel = redundancyLevel;
+        this.duration = duration;
         this.deadline = deadline;
-        this.resultStatus = resultStatus;
-        this.progress = 0;
     }
 
-    public void updateProgress(float value) {
-        progress = Math.max(0, Math.min(100, value));
-    }
-
-    public static Job createJob(
-        String jobId,
-        JobStatus status,
-        int redundancyLevel,
-        LocalDateTime deadline,
-        String resultStatus
-    ) {
+    public static Job createJob(String jobId, int duration, LocalDateTime deadline) {
         if (jobIdSet.contains(jobId)) {
             throw new IllegalArgumentException("Job Id invalid because it already exists.");
         }
 
-        Job createdJob = new Job(jobId, status, redundancyLevel, deadline, resultStatus);
+        Job createdJob = new Job(jobId, duration, deadline);
         jobIdSet.add(jobId);
         return createdJob;
     }
@@ -54,23 +31,11 @@ public class Job {
         return jobId;
     }
 
-    public JobStatus getStatus() {
-        return status;
-    }
-
-    public int getRedundancyLevel() {
-        return redundancyLevel;
+    public int getDuration() {
+        return duration;
     }
 
     public LocalDateTime getDeadline() {
         return deadline;
-    }
-
-    public String getResultStatus() {
-        return resultStatus;
-    }
-
-    public float getProgress() {
-        return progress;
     }
 }

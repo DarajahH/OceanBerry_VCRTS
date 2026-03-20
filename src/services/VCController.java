@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import models.job.Job;
-import models.job.JobAssignment;
 import models.vehicle.Vehicle;
 
 public class VCController {
@@ -43,13 +42,6 @@ public class VCController {
         }
 
         return completionRecords;
-    }
-
-    public JobAssignment creatJobAssignment(Job job) {
-        if (job == null) {
-            return null;
-        }
-        return new JobAssignment(job, "UNASSIGNED");
     }
 
     public Vehicle recruitVehicle() {

@@ -1,7 +1,7 @@
 package models.vehicle;
 
 import java.time.LocalDateTime;
-import models.job.JobAssignment;
+import models.job.Job;
 
 public class Vehicle {
     private String vehicleId;
@@ -10,9 +10,9 @@ public class Vehicle {
     private LocalDateTime departureTime;
     private boolean availability;
 
-    public void startJob(JobAssignment assignment) {
-        status = assignment == null ? "IDLE" : "IN_PROGRESS";
-        availability = assignment == null;
+    public void startJob(Job job) {
+        status = job == null ? "IDLE" : "IN_PROGRESS";
+        availability = job == null;
     }
 
     public void stopJob() {
