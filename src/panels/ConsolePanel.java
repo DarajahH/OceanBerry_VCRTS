@@ -8,7 +8,7 @@ import java.time.format.DateTimeFormatter;
 import javax.swing.*;
 import services.CloudDataService;
 
-public class createPanel {
+public class ConsolePanel {
     private final JFrame frame;
     private final JTextField idField, infoField, durField, deadlineField;
     private final JLabel idLabel, infoLabel, durLabel, deadlineLabel;
@@ -17,7 +17,7 @@ public class createPanel {
     private final CloudDataService service;
     private final DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss");
 
-    public createPanel() {
+    public ConsolePanel() {
         this.service = new CloudDataService(Paths.get("vcrts_log.txt"));
         frame = new JFrame("VCRTS - Vehicular Cloud Console");
         frame.setSize(1000, 700);

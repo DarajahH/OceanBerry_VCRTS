@@ -38,7 +38,7 @@ public class LoginScreen {
         loginBtn.addActionListener(e -> {
             if (CloudDataService.validateUser(userField.getText(), new String(passField.getPassword()))) {
                 frame.dispose();
-                new createPanel();
+                new MainScreen();
             } else {
                 JOptionPane.showMessageDialog(frame, "Invalid Credentials");
             }
@@ -48,6 +48,8 @@ public class LoginScreen {
             try {
                 CloudDataService.registerUser(userField.getText(), new String(passField.getPassword()));
                 JOptionPane.showMessageDialog(frame, "Account Created!");
+                 frame.dispose();
+                new MainScreen();
             } catch (Exception ex) { JOptionPane.showMessageDialog(frame, "Error saving user."); }
         });
 
