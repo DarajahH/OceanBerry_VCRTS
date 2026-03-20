@@ -1,20 +1,19 @@
 package app;
 
-
-import javax.swing.*;
+import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
 import views.ConsolePanel;
 
-
 public final class Main {
-    public static void main(String[] args) {
-        // Modernize the UI look
-        try {
-            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-        } catch (Exception ignored) {}
-             // Launch the application
-
-        SwingUtilities.invokeLater(() -> new ConsolePanel(dataService));
-        }
+    private Main() {
     }
 
+    public static void main(String[] args) {
+        try {
+            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+        } catch (Exception ignored) {
+        }
 
+        SwingUtilities.invokeLater(ConsolePanel::new);
+    }
+}
