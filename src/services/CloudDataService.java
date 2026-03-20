@@ -47,4 +47,21 @@ public class CloudDataService {
         }
         return false;
     }
+
+    // Returns only CLIENT job entries from the log file
+    // Used for FIFO completion time calculation 
+    public java.util.List<String> readClientLogs () throws IOException {
+        if (!Files.exists(logPath)) return java.util.Collections.emptyList();
+
+        java.util.List<String> allLogs = Files.readAllLines(logPath, StandardCharsets.UTF_8);
+        java.util.List<String> clientLogs = new java.util.ArrayList<>();
+
+        for(String line : allLogs) {
+            if (line.contains("ROLE:CLIENT")){
+                clientLogs.add(line);
+            }
+      }
+        return clientLogs;
+
+    }
 }

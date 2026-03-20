@@ -133,7 +133,7 @@ public class ConsolePanel {
     private void refreshMonitor() {
         try {
             monitorArea.setText("");
-            for (String line : service.readAllLogs()) monitorArea.append(line + "\n");
+            for (String line : service.readClientLogs()) monitorArea.append(line + "\n");
         } catch (IOException ignored) {}
     }
 
