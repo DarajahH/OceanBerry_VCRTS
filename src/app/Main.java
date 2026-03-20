@@ -4,11 +4,6 @@ import java.nio.file.Paths;
 import javax.swing.*;
 import services.CloudDataService;
 import views.ConsolePanel;
-<<<<<<< HEAD
-=======
-
->>>>>>> ba607fc5420e109dee03bf5620f8b143225b43b6
-
 public final class Main {
     public static void main(String[] args) {
         // Modernize the UI look
