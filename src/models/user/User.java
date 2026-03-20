@@ -1,6 +1,9 @@
 package models.user;
 
 public class User {
+
+/* Base class for all users in the system */
+
     private String userId;
     private String name;
 
@@ -9,5 +12,6 @@ public class User {
     }
 
     public void logout() {
+
     }
 }

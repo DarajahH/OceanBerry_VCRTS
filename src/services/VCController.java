@@ -8,6 +8,7 @@ import models.job.Job;
 import models.vehicle.Vehicle;
 
 public class VCController {
+
     private String controllerId;
     private String name;
     private String checkpoint;
@@ -21,7 +22,22 @@ public class VCController {
         this.dataService = dataService;
     }
 
+
+
+    public Vehicle recruitVehicle() {
+        return new Vehicle();
+    }
+
+    public void transferFromJob(Job job) {
+    }
+
+    public void setFileRedundancyLevel(int redundancyLevel) {
+    }
+
+      //Completion time calculation based on job durations and deadlines
+
     public List<JobCompletionRecord> calculateCompletionTimes() throws IOException {
+        
         List<JobCompletionRecord> completionRecords = new ArrayList<>();
         if (dataService == null) {
             return completionRecords;
@@ -29,9 +45,13 @@ public class VCController {
 
         int runningCompletionTime = 0;
         List<Map<String, String>> jobs = dataService.readClientJobRecords();
+
+
         for (Map<String, String> job : jobs) {
+
             int duration = Integer.parseInt(job.getOrDefault("DURATION", "0"));
             runningCompletionTime += duration;
+
             completionRecords.add(new JobCompletionRecord(
                 job.getOrDefault("ID", ""),
                 job.getOrDefault("INFO", ""),
@@ -44,15 +64,7 @@ public class VCController {
         return completionRecords;
     }
 
-    public Vehicle recruitVehicle() {
-        return new Vehicle();
-    }
-
-    public void transferFromJob(Job job) {
-    }
-
-    public void setFileRedundancyLevel(int redundancyLevel) {
-    }
+    //A static inner class to represent job completion records for display purposes
 
     public static final class JobCompletionRecord {
         private final String jobId;
