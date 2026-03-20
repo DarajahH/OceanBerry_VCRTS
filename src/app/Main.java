@@ -3,7 +3,8 @@ package app;
 import java.nio.file.Paths;
 import javax.swing.*;
 import services.CloudDataService;
-import views.LoginScreen;
+import views.ConsolePanel;
+
 
 public final class Main {
     public static void main(String[] args) {
@@ -19,7 +20,7 @@ public final class Main {
         );
 
         // Launch the application
-        SwingUtilities.invokeLater(() -> new LoginScreen(dataService));
+        SwingUtilities.invokeLater(() -> new ConsolePanel(dataService));
     }
 }
 
