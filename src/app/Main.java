@@ -19,10 +19,8 @@ public final class Main {
 
         // Launch the application
         SwingUtilities.invokeLater(() -> new ConsolePanel(dataService));
-<<<<<<< HEAD
         }
-=======
     }
->>>>>>> ba607fc5420e109dee03bf5620f8b143225b43b6
-}
+
+
 
