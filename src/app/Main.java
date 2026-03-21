@@ -13,14 +13,12 @@ public final class Main {
          CloudDataService service = new CloudDataService(
             java.nio.file.Paths.get("vcrts_log.txt"), 
             java.nio.file.Paths.get("users.txt")
-        );
-        
-        try {
+        );try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
         } catch (Exception ignored) {}
         
         // Launch the application
-        SwingUtilities.invokeLater(() -> new LoginScreen(service));
+        SwingUtilities.invokeLater(() -> new LoginScreen(service)); // Changed from createConsole to LoginScreen for better user experience and functionality. -DH
     }
 }
 

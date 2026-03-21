@@ -12,6 +12,7 @@ public class LoginScreen {
     private final JFrame frame;
 
     public LoginScreen(CloudDataService service) {
+
         this.service = service;
         frame = new JFrame("VCRTS Login Portal");
         frame.setSize(450, 400);
@@ -44,7 +45,7 @@ public class LoginScreen {
             // USING INSTANCE METHOD
             if (service.validateUser(userField.getText(), new String(passField.getPassword()))) {
                 frame.dispose();
-                new VCRTSDashboard(service); // Pass it down the chain
+                new VCRTSDashboard(service); // Changed from createConsole to VCRTSDashboard for better user experience and functionality. -DH
             } else {
                 JOptionPane.showMessageDialog(frame, "Invalid Credentials");
             }

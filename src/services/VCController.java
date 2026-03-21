@@ -14,15 +14,9 @@ public class VCController {
     private String checkpoint;
     private final CloudDataService dataService;
 
-    public VCController() {
-        this(null);
-    }
-
     public VCController(CloudDataService dataService) {
         this.dataService = dataService;
     }
-
-
 
     public Vehicle recruitVehicle() {
         return new Vehicle();

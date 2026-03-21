@@ -18,6 +18,9 @@ public class VCRTSDashboard {
     private final VCController controller;
     private final DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss");
 
+    private final CardLayout cardLayout;
+    private final JPanel leftCardContainer;
+
     // Form Components
     private JComboBox<String> roleBox;
     private JTextField idField, infoField, durField, deadlineField;
@@ -25,7 +28,7 @@ public class VCRTSDashboard {
     private JTextArea monitorArea;
 
     public VCRTSDashboard(CloudDataService service) {
-        this.service = service;
+       this.service = service;
         this.controller = new VCController(service);
 
         // 1. Setup Main Frame
@@ -38,24 +41,104 @@ public class VCRTSDashboard {
         // 2. Add Header
         frame.add(createHeader(), BorderLayout.NORTH);
 
-        // 3. Create Panels
-        JPanel leftControlPanel = createControlPanel();
+        // 3. Setup the CardLayout for the left panel -DH
+        cardLayout = new CardLayout();
+        leftCardContainer = new JPanel(cardLayout);
+        
+        // Home panel is the default view, form panel is for submissions, and we can add more as needed
+        leftCardContainer.add(createHomePanel(service), "HOME_SCREEN");
+        leftCardContainer.add(createSubmissionPanel(), "FORM_SCREEN");
+
+        // 4. Create the Right Panel (Monitor)
         JPanel rightMonitorPanel = createMonitorPanel();
 
-        // 4. Split Pane
-        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, leftControlPanel, rightMonitorPanel);
-        splitPane.setDividerLocation(400); // Give the form a bit more room
+        // 5. Split Pane (Holds the Card Container on the left, Monitor on the right)
+        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, leftCardContainer, rightMonitorPanel);
+        splitPane.setDividerLocation(400); 
         splitPane.setDividerSize(2);
         splitPane.setBorder(null);
         
         frame.add(splitPane, BorderLayout.CENTER);
 
-        // Initialize state
+        // Initialize state:
         adjustFields();
         refreshMonitor(null);
 
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
+    }
+    
+    // --- PANEL CREATION METHODS ---
+
+    /*
+    The Home Panel is a simple welcome screen with buttons to navigate to the submission form and to calculate completion times. 
+    It serves as the landing page after login, providing a clear starting point for users. 
+    The design is clean and minimalistic, with a focus on usability and quick access to key features while we work further through development.
+    -DH
+    */
+
+    public JPanel createHomePanel(CloudDataService service) {
+
+        
+        JPanel panel = new JPanel(new GridBagLayout());
+        panel.setBackground(new Color(30, 30, 35));
+        panel.setBorder(new EmptyBorder(40, 40, 40, 40));
+
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.gridx = 0;
+        gbc.weightx = 1.0;
+        gbc.weighty = 1.0;
+        gbc.anchor = GridBagConstraints.CENTER;
+
+        JLabel welcomeLabel = new JLabel("Welcome to VCRTS");
+        welcomeLabel.setForeground(Color.WHITE);
+        welcomeLabel.setFont(new Font("SansSerif", Font.BOLD, 24));
+
+        gbc.gridy = 0;
+        panel.add(welcomeLabel, gbc);
+
+        JLabel subLabel = new JLabel("VCRTS HOME DASHBOARD");
+        subLabel.setForeground(Color.GRAY);
+        subLabel.setFont(new Font("SansSerif", Font.PLAIN, 14));
+
+        gbc.gridy = 1;
+        gbc.weighty = 0.1;
+        panel.add(subLabel, gbc);
+
+        // Submission Button now brings users to the form screen instead of directly moving into submission Panel.
+
+        JButton btnOpenForm = new JButton("Submit New Transaction");
+        btnOpenForm.setFont(new Font("SansSerif", Font.BOLD, 14));
+        btnOpenForm.addActionListener(e -> {
+            frame.getContentPane().removeAll();
+            frame.add(createHeader(), BorderLayout.NORTH);
+            JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, createSubmissionPanel(), createMonitorPanel());
+            splitPane.setDividerLocation(400);
+            splitPane.setDividerSize(2);
+            splitPane.setBorder(null);
+            frame.add(splitPane, BorderLayout.CENTER);
+            frame.revalidate();
+            frame.repaint();
+        });
+
+        gbc.gridy = 2;
+        gbc.weighty = 0.5;
+        gbc.insets = new Insets(20, 0, 10, 0);
+        panel.add(btnOpenForm, gbc);
+
+/* Calculate Completion Times Button was left in for User efficiency 
+ This will trigger the logic to calculate and display completion times based on existing job records. -DH
+*/
+        JButton btnCalcTimes = new JButton("Calculate Completion Times");
+        btnCalcTimes.setFont(new Font("SansSerif", Font.BOLD, 14));
+        btnCalcTimes.addActionListener(e -> calculateCompletionTimes());
+
+        gbc.gridy = 3;
+        gbc.weighty = 0.1;
+        gbc.insets = new Insets(10, 0, 20, 0);
+        panel.add(btnCalcTimes, gbc);
+
+        return panel;
     }
 
     private JPanel createHeader() {
@@ -71,7 +154,7 @@ public class VCRTSDashboard {
         return header;
     }
 
-    private JPanel createControlPanel() {
+    private JPanel createSubmissionPanel() { //Renamed from createFormPanel to better reflect its purpose as the main interaction point for users to submit new transactions and jobs. -DH
         JPanel panel = new JPanel(new GridBagLayout());
         panel.setBackground(new Color(30, 30, 35));
         panel.setBorder(new EmptyBorder(20, 20, 20, 20));
@@ -85,7 +168,7 @@ public class VCRTSDashboard {
         gbc.gridx = 0; gbc.gridy = 0;
         panel.add(createWhiteLabel("Select Role:"), gbc);
         
-        roleBox = new JComboBox<>(new String[]{"OWNER", "CLIENT", "ADMIN"});
+        roleBox = new JComboBox<>(new String[]{"CLIENT", "ADMIN"});
         roleBox.addActionListener(e -> adjustFields());
         gbc.gridx = 1; 
         panel.add(roleBox, gbc);
@@ -126,6 +209,21 @@ public class VCRTSDashboard {
         calcBtn.addActionListener(e -> calculateCompletionTimes());
         gbc.gridy = 6; gbc.insets = new Insets(10, 10, 10, 10);
         panel.add(calcBtn, gbc);
+
+        /*  Home Button to return to the main dashboard/home screen 
+            without needing to log out and back in. -DH
+        */
+        JButton homeBtn = new JButton("Back to Home");
+        homeBtn.addActionListener(e -> { 
+            frame.getContentPane().removeAll();
+            frame.add(createHeader(), BorderLayout.NORTH);
+            frame.add(createHomePanel(service), BorderLayout.CENTER);
+            frame.revalidate();
+            frame.repaint();
+        });
+        gbc.gridy = 7; gbc.gridwidth = 2;
+        panel.add(homeBtn, gbc);
+
 
         // Spacer to push everything to the top
         gbc.gridy = 7; gbc.weighty = 1.0;
