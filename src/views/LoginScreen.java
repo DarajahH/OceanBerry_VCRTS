@@ -1,13 +1,19 @@
-package panels;
+package views;
 
 import java.awt.*;
-import javax.swing.*;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import services.CloudDataService;
+import javax.swing.*;
 
 public class LoginScreen {
+
+    private final CloudDataService service;
     private final JFrame frame;
 
-    public LoginScreen() {
+    public LoginScreen(CloudDataService service) {
+
+        this.service = service;
         frame = new JFrame("VCRTS Login Portal");
         frame.setSize(450, 400);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -35,10 +41,11 @@ public class LoginScreen {
         gbc.gridy = 5; frame.add(loginBtn, gbc);
         gbc.gridy = 6; frame.add(regBtn, gbc);
 
-        loginBtn.addActionListener(e -> {
-            if (CloudDataService.validateUser(userField.getText(), new String(passField.getPassword()))) {
+      loginBtn.addActionListener(e -> {
+            // USING INSTANCE METHOD
+            if (service.validateUser(userField.getText(), new String(passField.getPassword()))) {
                 frame.dispose();
-                new createPanel();
+                new VCRTSDashboard(service); // Changed from createConsole to VCRTSDashboard for better user experience and functionality. -DH
             } else {
                 JOptionPane.showMessageDialog(frame, "Invalid Credentials");
             }
@@ -46,11 +53,15 @@ public class LoginScreen {
 
         regBtn.addActionListener(e -> {
             try {
-                CloudDataService.registerUser(userField.getText(), new String(passField.getPassword()));
+                // USING INSTANCE METHOD
+                service.registerUser(userField.getText(), new String(passField.getPassword()));
                 JOptionPane.showMessageDialog(frame, "Account Created!");
-            } catch (Exception ex) { JOptionPane.showMessageDialog(frame, "Error saving user."); }
+            } catch (Exception ex) { 
+                JOptionPane.showMessageDialog(frame, "Error saving user."); 
+            }
         });
 
+        // Center the frame on screen
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
     }
