@@ -1,4 +1,4 @@
-package panels;
+package views;
 
 import java.awt.*;
 import java.nio.file.Path;
@@ -11,10 +11,8 @@ public class LoginScreen {
     private final CloudDataService service;
     private final JFrame frame;
 
-    public LoginScreen() {
-        Path logPath = Paths.get("vcrts_log.txt");
-        Path UserPath = Paths.get("users.txt");
-        this.service = new CloudDataService(logPath, UserPath);
+    public LoginScreen(CloudDataService service) {
+        this.service = service;
         frame = new JFrame("VCRTS Login Portal");
         frame.setSize(450, 400);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);

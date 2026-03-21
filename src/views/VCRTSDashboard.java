@@ -2,7 +2,6 @@ package views;
 
 import java.awt.*;
 import java.io.IOException;
-import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -25,8 +24,8 @@ public class VCRTSDashboard {
     private JLabel idLabel, infoLabel, durLabel, deadlineLabel;
     private JTextArea monitorArea;
 
-    public VCRTSDashboard() {
-        this.service = new CloudDataService(Paths.get("vcrts_log.txt"), Paths.get("users.txt"));
+    public VCRTSDashboard(CloudDataService service) {
+        this.service = service;
         this.controller = new VCController(service);
 
         // 1. Setup Main Frame
@@ -150,7 +149,7 @@ public class VCRTSDashboard {
         scrollPane.setBorder(BorderFactory.createTitledBorder(
             BorderFactory.createLineBorder(Color.DARK_GRAY), 
             "Live System Terminal", 
-            0, 0, null, Color.GREEN));
+            0, 0, null, Color.CYAN));
 
         panel.add(scrollPane, BorderLayout.CENTER);
         return panel;
