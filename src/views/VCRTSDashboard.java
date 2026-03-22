@@ -286,6 +286,12 @@ public class VCRTSDashboard {
         String dur = durField.getText().trim();
         String deadline = deadlineField.isVisible() ? deadlineField.getText().trim() : "N/A";
 
+        try {
+            Integer.parseInt(dur);
+        } catch (NumberFormatException e) {
+            J.OptionPane.showMessageDialog(frame, "Duration must be a number.");
+        }
+
         if (id.isEmpty() || info.isEmpty() || dur.isEmpty()) {
             JOptionPane.showMessageDialog(frame, "Please enter all required fields.");
             return;

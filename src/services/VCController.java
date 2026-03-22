@@ -46,10 +46,18 @@ public class VCController {
         // Read job records from the data service and calculate completion times based on durations and deadlines. This is a simplified example; real logic would be more complex and consider various factors. EC
         List<Map<String, String>> jobs = dataService.readClientJobRecords();
 
+        jobs.sort((a, b) -> a.get("TIMESTAMP").compareTo(b.get("TIMESTAMP")));
+
 
         for (Map<String, String> job : jobs) {
 
-            int duration = Integer.parseInt(job.getOrDefault("DURATION", "0"));
+            int duration;
+            try {
+                duration = Integer.parseInt(job.setOrDefault("DURATION", "0"));
+            } catch (NumberFormatException e) {
+                duration = 0;
+            }
+            
             runningCompletionTime += duration;
 
             completionRecords.add(new JobCompletionRecord(

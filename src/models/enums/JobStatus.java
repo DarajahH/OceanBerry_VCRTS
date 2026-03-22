@@ -2,7 +2,7 @@ package models.enums;
 
 public enum JobStatus {
     IN_PROGRESS("Job in progress"),
-    QUEDED("Job waiting in queue"),
+    QUEUED("Job waiting in queue"),
     COMPLETED("Job has completed"),
     FAILED("Job has failed");
 
