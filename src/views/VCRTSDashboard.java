@@ -310,12 +310,14 @@ public class VCRTSDashboard {
             return;
         }
 
+        //Form input collected cleanly- TC
         String id = idField.getText().trim();
         String info = infoField.getText().trim();
         String dur = durField.getText().trim();
         String deadline = deadlineField.isVisible() ? deadlineField.getText().trim() : "N/A";
         int duration;
 
+        
         if (id.isEmpty() || info.isEmpty() || dur.isEmpty()) {
             JOptionPane.showMessageDialog(frame, "Please enter all required fields.");
             return;
