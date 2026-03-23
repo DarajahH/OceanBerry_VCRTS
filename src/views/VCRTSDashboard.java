@@ -7,6 +7,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import models.job.Job;
 import services.CloudDataService;
 import services.VCController;
 import services.VCController.JobCompletionRecord;
@@ -285,11 +286,13 @@ public class VCRTSDashboard {
         String info = infoField.getText().trim();
         String dur = durField.getText().trim();
         String deadline = deadlineField.isVisible() ? deadlineField.getText().trim() : "N/A";
+        int duration;
 
         try {
-            Integer.parseInt(dur);
+            duration = Integer.parseInt(dur);
         } catch (NumberFormatException e) {
-            J.OptionPane.showMessageDialog(frame, "Duration must be a number.");
+            JOptionPane.showMessageDialog(frame, "Duration must be a number.");
+            return;
         }
 
         if (id.isEmpty() || info.isEmpty() || dur.isEmpty()) {
@@ -302,13 +305,24 @@ public class VCRTSDashboard {
             return;
         }
 
-        String entry = String.format("[%s] ROLE:%s | ID:%s | INFO:%s | DURATION:%s | DEADLINE:%s",
-            dtf.format(LocalDateTime.now()), role, id, info, dur, deadline);
-
         try {
+            LocalDateTime arrivalTime = LocalDateTime.now();
+            LocalDateTime deadlineTime = deadlineField.isVisible()
+                ? LocalDateTime.parse(deadline, dtf)
+                : null;
+            Job job = Job.createJob(id, info, duration, arrivalTime, deadlineTime);
+            String formattedDeadline = deadlineTime == null ? "N/A" : dtf.format(deadlineTime);
+            String entry = String.format("[%s] ROLE:%s | ID:%s | INFO:%s | DURATION:%d | DEADLINE:%s",
+                dtf.format(arrivalTime), role, id, info, duration, formattedDeadline);
+
+            service.appendJob(job);
             service.appendLog(entry);
             refreshMonitor("Saved entry:\n" + entry);
             clear();
+        } catch (java.time.format.DateTimeParseException e) {
+            JOptionPane.showMessageDialog(frame, "Deadline must use format yyyy/MM/dd HH:mm:ss.");
+        } catch (IllegalArgumentException e) {
+            JOptionPane.showMessageDialog(frame, e.getMessage());
         } catch (IOException e) {
             JOptionPane.showMessageDialog(frame, "File Error");
         }

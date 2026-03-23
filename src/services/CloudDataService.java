@@ -5,19 +5,30 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import models.enums.JobStatus;
+import models.job.Job;
 
 public class CloudDataService {
+    private static final String JOB_FIELD_DELIMITER = "\t";
     private final Path logPath;
     private final Path userPath;
+    private final Path jobPath;
 
     public CloudDataService(Path logPath, Path userPath) {
+        this(logPath, userPath, logPath.resolveSibling("jobs.txt"));
+    }
+
+    public CloudDataService(Path logPath, Path userPath, Path jobPath) {
         this.logPath = logPath;
         this.userPath = userPath;
+        this.jobPath = jobPath;
     }
 
     public void appendLog(String entry) throws IOException {
@@ -63,6 +74,35 @@ public class CloudDataService {
             e.printStackTrace();
         }
         return false;
+    }
+
+    public void appendJob(Job job) throws IOException {
+        if (job == null) {
+            return;
+        }
+
+        Files.writeString(
+            jobPath,
+            serializeJob(job) + System.lineSeparator(),
+            StandardCharsets.UTF_8,
+            StandardOpenOption.CREATE,
+            StandardOpenOption.APPEND
+        );
+    }
+
+    public List<Job> readJobs() throws IOException {
+        if (!Files.exists(jobPath)) {
+            return Collections.emptyList();
+        }
+
+        List<Job> jobs = new ArrayList<>();
+        for (String line : Files.readAllLines(jobPath, StandardCharsets.UTF_8)) {
+            Job job = parseJobLine(line);
+            if (job != null) {
+                jobs.add(job);
+            }
+        }
+        return jobs;
     }
 
     public List<String> readClientLogs() throws IOException {
@@ -113,5 +153,115 @@ public class CloudDataService {
         }
 
         return fields;
+    }
+
+    //Serializes a job object to a string - NAEEM
+    private String serializeJob(Job job) {
+        return String.join(
+            JOB_FIELD_DELIMITER,
+            encodeField(job.getJobId()),
+            encodeField(job.getDescription()),
+            Integer.toString(job.getDuration()),
+            job.getArrivalTime() == null ? "" : job.getArrivalTime().toString(),
+            job.getDeadline() == null ? "" : job.getDeadline().toString(),
+            job.getStatus() == null ? "" : job.getStatus().name(),
+            job.getCompletionTime() == null ? "" : Integer.toString(job.getCompletionTime())
+        );
+    }
+
+    //Parses a job object from a string - NAEEM
+    private Job parseJobLine(String line) {
+        if (line == null || line.isBlank()) {
+            return null;
+        }
+
+        String[] fields = line.split(JOB_FIELD_DELIMITER, -1);
+        if (fields.length < 7) {
+            return null;
+        }
+
+        try {
+            String jobId = decodeField(fields[0]);
+            String description = decodeField(fields[1]);
+            int duration = Integer.parseInt(fields[2]);
+            LocalDateTime arrivalTime = parseDateTime(fields[3]);
+            LocalDateTime deadline = parseDateTime(fields[4]);
+            JobStatus status = fields[5].isBlank() ? JobStatus.QUEUED : JobStatus.valueOf(fields[5]);
+            Integer completionTime = fields[6].isBlank() ? null : Integer.parseInt(fields[6]);
+
+            Job.registerExistingJobId(jobId);
+            return new Job(jobId, description, duration, arrivalTime, deadline, status, completionTime);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    //Parses a date time string to a LocalDateTime object - NAEEM
+    private LocalDateTime parseDateTime(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+
+        try {
+            return LocalDateTime.parse(value);
+        } catch (DateTimeParseException e) {
+            return null;
+        }
+    }
+
+    //Encodes a string to a format that can be stored in a file - NAEEM
+    private String encodeField(String value) {
+        if (value == null) {
+            return "";
+        }
+
+        return value
+            .replace("\\", "\\\\")
+            .replace("\t", "\\t")
+            .replace("\n", "\\n")
+            .replace("\r", "\\r");
+    }
+
+    //Decodes a string from a format that can be stored in a file - NAEEM
+    private String decodeField(String value) {
+        if (value == null || value.isEmpty()) {
+            return "";
+        }
+
+        StringBuilder result = new StringBuilder();
+        boolean escaping = false;
+        for (int i = 0; i < value.length(); i++) {
+            char currentChar = value.charAt(i);
+            if (escaping) {
+                switch (currentChar) {
+                    case 't':
+                        result.append('\t');
+                        break;
+                    case 'n':
+                        result.append('\n');
+                        break;
+                    case 'r':
+                        result.append('\r');
+                        break;
+                    case '\\':
+                        result.append('\\');
+                        break;
+                    default:
+                        result.append(currentChar);
+                        break;
+                }
+                escaping = false;
+            } else if (currentChar == '\\') {
+                escaping = true;
+            } else {
+                result.append(currentChar);
+            }
+        }
+
+        if (escaping) {
+            result.append('\\');
+        }
+
+        return result.toString();
     }
 }

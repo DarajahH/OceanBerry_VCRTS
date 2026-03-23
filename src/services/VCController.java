@@ -2,12 +2,15 @@ package services;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
+import java.time.format.DateTimeFormatter;
 import models.job.Job;
 import models.vehicle.Vehicle;
 
 public class VCController {
+    private static final DateTimeFormatter DISPLAY_DATE_TIME =
+        DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss");
 
     private String controllerId;
     private String name;
@@ -41,30 +44,21 @@ public class VCController {
             return completionRecords;
         }
 
-        // This is a simplified example of how completion times might be calculated. In a real implementation, this would involve more complex logic to consider job dependencies, vehicle availability, and other factors. EC
         int runningCompletionTime = 0;
-        // Read job records from the data service and calculate completion times based on durations and deadlines. This is a simplified example; real logic would be more complex and consider various factors. EC
-        List<Map<String, String>> jobs = dataService.readClientJobRecords();
+        List<Job> jobs = new ArrayList<>(dataService.readJobs());
 
-        jobs.sort((a, b) -> a.get("TIMESTAMP").compareTo(b.get("TIMESTAMP")));
+        jobs.sort(Comparator.comparing(Job::getArrivalTime, Comparator.nullsLast(Comparator.naturalOrder())));
 
 
-        for (Map<String, String> job : jobs) {
-
-            int duration;
-            try {
-                duration = Integer.parseInt(job.setOrDefault("DURATION", "0"));
-            } catch (NumberFormatException e) {
-                duration = 0;
-            }
-            
-            runningCompletionTime += duration;
+        for (Job job : jobs) {
+            runningCompletionTime += job.getDuration();
+            job.setCompletionTime(runningCompletionTime);
 
             completionRecords.add(new JobCompletionRecord(
-                job.getOrDefault("ID", ""),
-                job.getOrDefault("INFO", ""),
-                duration,
-                job.getOrDefault("DEADLINE", "N/A"),
+                job.getJobId(),
+                job.getDescription(),
+                job.getDuration(),
+                formatDeadline(job),
                 runningCompletionTime
             ));
         }
@@ -105,5 +99,12 @@ public class VCController {
                 completionTime
             );
         }
+    }
+
+    private String formatDeadline(Job job) {
+        if (job.getDeadline() == null) {
+            return "N/A";
+        }
+        return DISPLAY_DATE_TIME.format(job.getDeadline());
     }
 }
