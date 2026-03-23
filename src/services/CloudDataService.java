@@ -49,7 +49,18 @@ public class CloudDataService {
     }
 
     public void registerUser(String username, String password) throws IOException {
-        String entry = username + ":" + password + System.lineSeparator();
+        String cleanUsername = username == null ? "" : username.trim();
+        String cleanPassword = password == null ? "" : password.trim();
+
+        if (cleanUsername.isEmpty() || cleanPassword.isEmpty()) {
+            throw new IllegalArgumentException("Username and password are required.");
+        }
+
+        if (userExists(cleanUsername)) {
+            throw new IllegalArgumentException("Username already exists.");
+        }
+
+        String entry = cleanUsername + ":" + cleanPassword + System.lineSeparator();
         Files.writeString(
             userPath,
             entry,
@@ -60,18 +71,45 @@ public class CloudDataService {
     }
 
     public boolean validateUser(String username, String password) {
+        String cleanUsername = username == null ? "" : username.trim();
+        String cleanPassword = password == null ? "" : password.trim();
+
+        if (cleanUsername.isEmpty() || cleanPassword.isEmpty()) {
+            return false;
+        }
+
         try {
             if (!Files.exists(userPath)) {
                 return false;
             }
             List<String> users = Files.readAllLines(userPath, StandardCharsets.UTF_8);
             for (String line : users) {
-                if (line.equals(username + ":" + password)) {
+                if (line.equals(cleanUsername + ":" + cleanPassword)) {
                     return true;
                 }
             }
         } catch (IOException e) {
             e.printStackTrace();
+        }
+        return false;
+    }
+
+    public boolean userExists(String username) throws IOException {
+        String cleanUsername = username == null ? "" : username.trim();
+        if (cleanUsername.isEmpty() || !Files.exists(userPath)) {
+            return false;
+        }
+
+        List<String> users = Files.readAllLines(userPath, StandardCharsets.UTF_8);
+        for (String line : users) {
+            int separatorIndex = line.indexOf(':');
+            if (separatorIndex <= 0) {
+                continue;
+            }
+            String existingUsername = line.substring(0, separatorIndex).trim();
+            if (existingUsername.equals(cleanUsername)) {
+                return true;
+            }
         }
         return false;
     }

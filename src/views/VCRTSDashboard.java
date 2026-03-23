@@ -123,7 +123,7 @@ public class VCRTSDashboard {
         });
 
         gbc.gridy = 2;
-        gbc.weighty = 0.5;
+        gbc.weighty = 0.2;
         gbc.insets = new Insets(20, 0, 10, 0);
         panel.add(btnOpenForm, gbc);
 
@@ -139,6 +139,27 @@ public class VCRTSDashboard {
         gbc.insets = new Insets(10, 0, 20, 0);
         panel.add(btnCalcTimes, gbc);
 
+        JTextArea introMessage = new JTextArea(
+            "VCRTS lets users submit jobs, store job data in files, and calculate FIFO completion times.\n\n"
+            + "How to proceed:\n"
+            + "1. Click \"Submit New Transaction\"\n"
+            + "2. Enter Job ID, description, duration, and deadline\n"
+            + "3. Submit the entry\n"
+            + "4. Click \"Calculate Completion Times\" to view results"
+        );
+        introMessage.setEditable(false);
+        introMessage.setLineWrap(true);
+        introMessage.setWrapStyleWord(true);
+        introMessage.setOpaque(false);
+        introMessage.setForeground(Color.LIGHT_GRAY);
+        introMessage.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        introMessage.setBorder(null);
+
+        gbc.gridy = 4;
+        gbc.weighty = 0.3;
+        gbc.insets = new Insets(20, 20, 20, 20);
+        panel.add(introMessage, gbc);
+
         return panel;
     }
 
@@ -151,6 +172,13 @@ public class VCRTSDashboard {
         title.setForeground(Color.CYAN);
         title.setFont(new Font("SansSerif", Font.BOLD, 18));
         header.add(title, BorderLayout.WEST);
+
+        JButton logoutBtn = new JButton("Logout");
+        logoutBtn.addActionListener(e -> {
+            frame.dispose();
+            new LoginScreen(service);
+        });
+        header.add(logoutBtn, BorderLayout.EAST);
 
         return header;
     }
@@ -169,7 +197,7 @@ public class VCRTSDashboard {
         gbc.gridx = 0; gbc.gridy = 0;
         panel.add(createWhiteLabel("Select Role:"), gbc);
         
-        roleBox = new JComboBox<>(new String[]{"CLIENT", "ADMIN"});
+        roleBox = new JComboBox<>(new String[]{"OWNER", "CLIENT", "ADMIN"});
         roleBox.addActionListener(e -> adjustFields());
         gbc.gridx = 1; 
         panel.add(roleBox, gbc);
@@ -288,15 +316,20 @@ public class VCRTSDashboard {
         String deadline = deadlineField.isVisible() ? deadlineField.getText().trim() : "N/A";
         int duration;
 
+        if (id.isEmpty() || info.isEmpty() || dur.isEmpty()) {
+            JOptionPane.showMessageDialog(frame, "Please enter all required fields.");
+            return;
+        }
+
+        if (!id.matches("\\d+")) {
+            JOptionPane.showMessageDialog(frame, "ID must be numeric (digits only).");
+            return;
+        }
+
         try {
             duration = Integer.parseInt(dur);
         } catch (NumberFormatException e) {
             JOptionPane.showMessageDialog(frame, "Duration must be a number.");
-            return;
-        }
-
-        if (id.isEmpty() || info.isEmpty() || dur.isEmpty()) {
-            JOptionPane.showMessageDialog(frame, "Please enter all required fields.");
             return;
         }
 
@@ -310,12 +343,14 @@ public class VCRTSDashboard {
             LocalDateTime deadlineTime = deadlineField.isVisible()
                 ? LocalDateTime.parse(deadline, dtf)
                 : null;
-            Job job = Job.createJob(id, info, duration, arrivalTime, deadlineTime);
             String formattedDeadline = deadlineTime == null ? "N/A" : dtf.format(deadlineTime);
             String entry = String.format("[%s] ROLE:%s | ID:%s | INFO:%s | DURATION:%d | DEADLINE:%s",
                 dtf.format(arrivalTime), role, id, info, duration, formattedDeadline);
 
-            service.appendJob(job);
+            if ("CLIENT".equals(role)) {
+                Job job = Job.createJob(id, info, duration, arrivalTime, deadlineTime);
+                service.appendJob(job);
+            }
             service.appendLog(entry);
             refreshMonitor("Saved entry:\n" + entry);
             clear();

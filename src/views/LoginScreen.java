@@ -42,8 +42,16 @@ public class LoginScreen {
         gbc.gridy = 6; frame.add(regBtn, gbc);
 
       loginBtn.addActionListener(e -> {
+            String username = userField.getText().trim();
+            String password = new String(passField.getPassword()).trim();
+
+            if (username.isEmpty() || password.isEmpty()) {
+                JOptionPane.showMessageDialog(frame, "Please enter both username and password.");
+                return;
+            }
+
             // USING INSTANCE METHOD
-            if (service.validateUser(userField.getText(), new String(passField.getPassword()))) {
+            if (service.validateUser(username, password)) {
                 frame.dispose();
                 new VCRTSDashboard(service); // Changed from createConsole to VCRTSDashboard for better user experience and functionality. -DH
             } else {
@@ -52,10 +60,20 @@ public class LoginScreen {
         });
 
         regBtn.addActionListener(e -> {
+            String username = userField.getText().trim();
+            String password = new String(passField.getPassword()).trim();
+
+            if (username.isEmpty() || password.isEmpty()) {
+                JOptionPane.showMessageDialog(frame, "Username and password cannot be blank.");
+                return;
+            }
+
             try {
                 // USING INSTANCE METHOD
-                service.registerUser(userField.getText(), new String(passField.getPassword()));
+                service.registerUser(username, password);
                 JOptionPane.showMessageDialog(frame, "Account Created!");
+            } catch (IllegalArgumentException ex) {
+                JOptionPane.showMessageDialog(frame, ex.getMessage());
             } catch (Exception ex) { 
                 JOptionPane.showMessageDialog(frame, "Error saving user."); 
             }
