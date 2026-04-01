@@ -5,6 +5,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import services.CloudDataService;
 import javax.swing.*;
+import java.awt.event.KeyEvent;
 
 public class LoginScreen {
 
@@ -41,15 +42,25 @@ public class LoginScreen {
         gbc.gridy = 5; frame.add(loginBtn, gbc);
         gbc.gridy = 6; frame.add(regBtn, gbc);
 
-      loginBtn.addActionListener(e -> {
-            // USING INSTANCE METHOD
-            if (service.validateUser(userField.getText(), new String(passField.getPassword()))) {
-                frame.dispose();
-                new VCRTSDashboard(service); // Changed from createConsole to VCRTSDashboard for better user experience and functionality. -DH
-            } else {
-                JOptionPane.showMessageDialog(frame, "Invalid Credentials");
+    loginBtn.addActionListener(e -> {
+        // USING INSTANCE METHOD
+        if (service.validateUser(userField.getText(), new String(passField.getPassword()))) {
+            frame.dispose();
+            new VCRTSDashboard(service); // Changed from createConsole to VCRTSDashboard for better user experience and functionality. -DH
+        } else {
+            JOptionPane.showMessageDialog(frame, "Invalid Credentials");
+        }
+    });
+
+    passField.addKeyListener(new java.awt.event.KeyAdapter() {
+        @Override
+        public void keyPressed(KeyEvent e) {
+            if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                loginBtn.doClick();
             }
-        });
+        }
+    });
+
 
         regBtn.addActionListener(e -> {
             try {
