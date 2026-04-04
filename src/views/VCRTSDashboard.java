@@ -49,7 +49,7 @@ public class VCRTSDashboard {
         // Home panel is the default view, form panel is for submissions, and we can add more as needed
         leftCardContainer.add(createHomePanel(service), "HOME_SCREEN");
         leftCardContainer.add(createSubmissionPanel(), "FORM_SCREEN");
-        leftCardContainer.add(new JPanel(), "PLACEHOLDER"); // Placeholder for future panels like AdminScreen, Analytics, etc.
+        leftCardContainer.add(new JPanel(), "AdminScreen"); 
         leftCardContainer.setBackground(new Color(30, 30, 35));
 
 
@@ -81,6 +81,10 @@ public class VCRTSDashboard {
     -DH
     */
 
+    /**
+     * @param service
+     * @return
+     */
     public JPanel createHomePanel(CloudDataService service) {
 
         
@@ -142,7 +146,23 @@ public class VCRTSDashboard {
         gbc.insets = new Insets(10, 0, 20, 0);
         panel.add(btnCalcTimes, gbc);
 
+
+        JButton btnAdminScreen = new JButton("Go to Admin Screen");
+        btnAdminScreen.setFont(new Font("SansSerif", Font.BOLD, 14));
+        btnAdminScreen.addActionListener(e -> {
+            frame.getContentPane().removeAll();
+            frame.add(createHeader(), BorderLayout.NORTH);
+            //JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, new AdminScreen(service), createMonitorPanel());
+            splitPane.setDividerLocation(400);
+            splitPane.setDividerSize(2);
+            splitPane.setBorder(null);
+            frame.add(splitPane, BorderLayout.CENTER);
+            frame.revalidate();
+            frame.repaint();
+        });
+
         return panel;
+        
     }
 
     private JPanel createHeader() {
