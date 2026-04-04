@@ -1,6 +1,7 @@
 package views;
 
 import java.awt.*;
+import java.awt.event.KeyEvent;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -49,6 +50,9 @@ public class VCRTSDashboard {
         // Home panel is the default view, form panel is for submissions, and we can add more as needed
         leftCardContainer.add(createHomePanel(service), "HOME_SCREEN");
         leftCardContainer.add(createSubmissionPanel(), "FORM_SCREEN");
+        leftCardContainer.add(new JPanel(), "PLACEHOLDER"); // Placeholder for future panels like AdminScreen, Analytics, etc.
+        leftCardContainer.setBackground(new Color(30, 30, 35));
+
 
         // 4. Create the Right Panel (Monitor)
         JPanel rightMonitorPanel = createMonitorPanel();
@@ -183,7 +187,11 @@ public class VCRTSDashboard {
         return header;
     }
 
-    private JPanel createSubmissionPanel() { //Renamed from createFormPanel to better reflect its purpose as the main interaction point for users to submit new transactions and jobs. -DH
+    private JPanel createSubmissionPanel() { 
+        
+    //Renamed from createFormPanel to better reflect its purpose as the main interaction point for users 
+    // to submit new transactions and jobs. -DH
+        
         JPanel panel = new JPanel(new GridBagLayout());
         panel.setBackground(new Color(30, 30, 35));
         panel.setBorder(new EmptyBorder(20, 20, 20, 20));
@@ -218,11 +226,11 @@ public class VCRTSDashboard {
         gbc.gridx = 0; gbc.gridy = 3;
         durLabel = createWhiteLabel("Residency (Hrs):");
         panel.add(durLabel, gbc);
-        durField = new JTextField();
+        durField = new JTextField("Please enter in the expected duration in hours. For example, '2' for 2 hours.");
         gbc.gridx = 1; panel.add(durField, gbc);
 
         gbc.gridx = 0; gbc.gridy = 4;
-        deadlineLabel = createWhiteLabel("Job Deadline:");
+        deadlineLabel = createWhiteLabel("Job Deadline (YYYY-MM-DD HR:MM:SS):");
         panel.add(deadlineLabel, gbc);
         deadlineField = new JTextField();
         gbc.gridx = 1; panel.add(deadlineField, gbc);
@@ -260,6 +268,12 @@ public class VCRTSDashboard {
 
         return panel;
     }
+
+ public void keypressed(KeyEvent e) {
+            if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                saveEntry();
+            }
+        }
 
     private JPanel createMonitorPanel() {
         JPanel panel = new JPanel(new BorderLayout());

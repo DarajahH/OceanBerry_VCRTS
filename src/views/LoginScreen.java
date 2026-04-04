@@ -1,10 +1,8 @@
 package views;
 
 import java.awt.*;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import services.CloudDataService;
 import javax.swing.*;
+import services.CloudDataService;
 
 public class LoginScreen {
 
@@ -42,16 +40,8 @@ public class LoginScreen {
         gbc.gridy = 6; frame.add(regBtn, gbc);
 
       loginBtn.addActionListener(e -> {
-            String username = userField.getText().trim();
-            String password = new String(passField.getPassword()).trim();
-
-            if (username.isEmpty() || password.isEmpty()) {
-                JOptionPane.showMessageDialog(frame, "Please enter both username and password.");
-                return;
-            }
-
             // USING INSTANCE METHOD
-            if (service.validateUser(username, password)) {
+            if (service.validateUser(userField.getText(), new String(passField.getPassword()))) {
                 frame.dispose();
                 new VCRTSDashboard(service); // Changed from createConsole to VCRTSDashboard for better user experience and functionality. -DH
             } else {

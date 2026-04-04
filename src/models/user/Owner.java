@@ -13,8 +13,16 @@ public class Owner extends User {
     - Delete a vehicle from the system if they no longer want to use it for job processing.
 -DH
 */
+   public Owner(String ownerID, String name) {
+        this.ownerId = ownerID;
+        this.name = name;
+   }
 
+   public String getOwnerID() {
+        return ownerId;
+   }
 
- 
-
+   public String getName() {
+        return name;
+   }
 }
