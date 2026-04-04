@@ -201,7 +201,7 @@ public class VCRTSDashboard {
         gbc.gridx = 1; panel.add(durField, gbc);
 
         gbc.gridx = 0; gbc.gridy = 4;
-        deadlineLabel = createWhiteLabel("Job Deadline:");
+        deadlineLabel = createWhiteLabel("Job Deadline (YYYY-MM-DD HR:MM:SS):");
         panel.add(deadlineLabel, gbc);
         deadlineField = new JTextField();
         gbc.gridx = 1; panel.add(deadlineField, gbc);
