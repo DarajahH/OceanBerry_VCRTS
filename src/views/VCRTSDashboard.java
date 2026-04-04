@@ -12,6 +12,7 @@ import services.CloudDataService;
 import services.VCController;
 import services.VCController.JobCompletionRecord;
 
+
 public class VCRTSDashboard {
 
     private final JFrame frame;
@@ -49,7 +50,11 @@ public class VCRTSDashboard {
         // Home panel is the default view, form panel is for submissions, and we can add more as needed
         leftCardContainer.add(createHomePanel(service), "HOME_SCREEN");
         leftCardContainer.add(createSubmissionPanel(), "FORM_SCREEN");
+<<<<<<< Updated upstream
         leftCardContainer.add(new JPanel(), "AdminScreen"); 
+=======
+        leftCardContainer.add(new createAdminScreen(service), "AdminScreen"); 
+>>>>>>> Stashed changes
         leftCardContainer.setBackground(new Color(30, 30, 35));
 
 
@@ -105,7 +110,7 @@ public class VCRTSDashboard {
         gbc.gridy = 0;
         panel.add(welcomeLabel, gbc);
 
-        JLabel subLabel = new JLabel("VCRTS HOME DASHBOARD");
+        JLabel subLabel = new JLabel("VCRTS HOME");
         subLabel.setForeground(Color.GRAY);
         subLabel.setFont(new Font("SansSerif", Font.PLAIN, 14));
 
@@ -133,6 +138,22 @@ public class VCRTSDashboard {
         gbc.weighty = 0.5;
         gbc.insets = new Insets(20, 0, 10, 0);
         panel.add(btnOpenForm, gbc);
+
+        JButton AdminBTN = new JButton("Admin");
+        AdminBTN.setFont(new Font("Ariel", Font.BOLD, 12));
+        AdminBTN.addActionListener(e -> {
+            frame.getContentPane().removeAll();
+            frame.add(createHeader(), BorderLayout.NORTH);
+            JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, createMonitorPanel(), new createAdminScreen(service));
+            splitPane.setDividerLocation(400);
+            splitPane.setDividerSize(2);
+            splitPane.setBorder(null);
+            frame.add(splitPane, BorderLayout.CENTER);
+            frame.revalidate();
+            frame.repaint();
+            frame.setVisible(true);
+
+    });
 
 /* Calculate Completion Times Button was left in for User efficiency 
  This will trigger the logic to calculate and display completion times based on existing job records. -DH
