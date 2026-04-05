@@ -7,6 +7,10 @@ public class User {
     private String userId;
     private String name;
 
+    public User() {
+        private
+    }
+
     public boolean login(String username, String password) {
         return false;
     }

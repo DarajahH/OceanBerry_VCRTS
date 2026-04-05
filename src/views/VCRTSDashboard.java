@@ -235,12 +235,8 @@ public class VCRTSDashboard {
         // Role Selection
         gbc.gridx = 0; gbc.gridy = 0;
         panel.add(createWhiteLabel("Select Role:"), gbc);
-<<<<<<< HEAD
-        
+
         roleBox = new JComboBox<>(new String[]{"OWNER", "CLIENT", "ADMIN"});
-=======
-        roleBox = new JComboBox<>(new String[]{"CLIENT", "ADMIN"});
->>>>>>> Test_Branch
         roleBox.addActionListener(e -> adjustFields());
         gbc.gridx = 1; 
         panel.add(roleBox, gbc);
