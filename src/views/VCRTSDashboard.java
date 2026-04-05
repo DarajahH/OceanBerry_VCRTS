@@ -267,6 +267,8 @@ public class VCRTSDashboard {
         return panel;
     }
 
+//Show Screen method calls Panels - DH
+
     private void showScreen(JPanel contentPanel) {
         frame.getContentPane().removeAll();
         frame.add(createHeader(), BorderLayout.NORTH);
@@ -440,6 +442,7 @@ public class VCRTSDashboard {
         return backBtn;
     }
 
+    //VK- DH
     public void keypressed(KeyEvent e) {
         if (e.getKeyCode() == KeyEvent.VK_ENTER) {
             saveEntry();
@@ -561,7 +564,7 @@ public class VCRTSDashboard {
         idField.setText(""); infoField.setText(""); durField.setText(""); deadlineField.setText("");
     }
 
-    // Admin Screen
+    // Admin Screen - DH
     public JPanel createAdminScreen(CloudDataService service) {
         JPanel adminPanel = new JPanel(new GridBagLayout());
         adminPanel.setBackground(new Color(30, 30, 35));
