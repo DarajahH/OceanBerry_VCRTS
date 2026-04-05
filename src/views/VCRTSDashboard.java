@@ -2,7 +2,8 @@ package views;
 
 import java.awt.*;
 import java.awt.event.KeyEvent;
-import java.io.IOException;
+import java.io.*;
+import java.net.Socket;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -357,7 +358,7 @@ public class VCRTSDashboard {
         String deadline = deadlineField.isVisible() ? deadlineField.getText().trim() : "N/A";
         int duration;
 
-        
+
         if (id.isEmpty() || info.isEmpty() || dur.isEmpty()) {
             JOptionPane.showMessageDialog(frame, "Please enter all required fields.");
             return;
@@ -389,29 +390,44 @@ public class VCRTSDashboard {
             String entry = String.format("[%s] ROLE:%s | ID:%s | INFO:%s | DURATION:%d | DEADLINE:%s",
                 dtf.format(arrivalTime), role, id, info, duration, formattedDeadline);
 
-            boolean approved = requestApproval(entry);
+            // Send this fucker to VC Controller server over socket
+            refreshMonitor("Connecting to VC Controller server...");
 
-            if (approved) {
-                if ("CLIENT".equals(role)) {
-                    Job job = Job.createJob(id, info, duration, arrivalTime, deadlineTime);
-                    service.appendJob(job);
-                }
+            Socket socket = new Socket("localhost", 9806);
+            DataOutputStream outputStream = new DataOutputStream(socket.getOutputStream());
+            DataInputStream inputStream = new DataInputStream(socket.getInputStream());
 
-                service.appendLog(entry);
+            // Client sends the entry to server
+            outputStream.writeUTF(entry);
+
+            // Client should read acknowledge from server
+            String ack = inputStream.readUTF();
+            refreshMonitor("Server response: " + ack + " - Pending approval...");
+
+            // Client reads the final decision from server(accept or nah)
+            String decision = inputStream.readUTF();
+
+            if ("ACCEPTED".equals(decision)) {
                 refreshMonitor("FINAL STATUS: ACCEPTED\n\nSaved entry:\n" + entry);
                 clear();
             } else {
                 refreshMonitor("FINAL STATUS: REJECTED\n\nRejected entry:\n" + entry);
-                JOptionPane.showMessageDialog(frame, "Request rejected. Nothing was saved.");
+                JOptionPane.showMessageDialog(frame, "Request rejected by VC Controller. Nothing was saved.");
             }
-            
-            
+
+            // Connection close
+            inputStream.close();
+            outputStream.close();
+            socket.close();
+
         } catch (java.time.format.DateTimeParseException e) {
             JOptionPane.showMessageDialog(frame, "Deadline must use format yyyy/MM/dd HH:mm:ss.");
+        } catch (java.net.ConnectException e) {
+            JOptionPane.showMessageDialog(frame, "Cannot connect to VC Controller server.\nMake sure the server is running first.");
         } catch (IllegalArgumentException e) {
             JOptionPane.showMessageDialog(frame, e.getMessage());
         } catch (IOException e) {
-            JOptionPane.showMessageDialog(frame, "File Error");
+            JOptionPane.showMessageDialog(frame, "Connection error: " + e.getMessage());
         }
     }
 
