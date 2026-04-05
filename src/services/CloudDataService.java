@@ -65,6 +65,10 @@ public class CloudDataService {
         return false;
     }
 
+    public Path getLogPath() {
+        return logPath;
+    }
+
     public List<String> readClientLogs() throws IOException {
         List<String> clientLogs = new ArrayList<>();
         for (String line : readAllLogs()) {
