@@ -317,6 +317,32 @@ public class VCRTSDashboard {
         frame.revalidate(); // Refreshes the UI so hidden fields don't leave weird spaces
     }
 
+    private boolean requestApproval(String entry) {
+        //: Step 1: ACK (Acknowledgment)
+        JOptionPane.showMessageDialog(
+            frame,
+            "ACK: Request received by VC contoller. \n\nPending approval.",
+            "Resquest Acknowledged",
+            JOptionPane.INFORMATION_MESSAGE
+        );
+
+        //Step 2: VC Controller decision 
+        String[] options = {"Accept", "Reject"};
+
+        int decision = JOptionPane.showOptionDialog(
+            frame,
+            "VC Controller Review:\n\n" + entry + "\n\nAccept or Reject this request?",
+            "VC Controller Decision",
+            JOptionPane.DEFAULT_OPTION,
+            JOptionPane.QUESTION_MESSAGE,
+            null,
+            options,
+            options[0]
+        );
+
+        return decision == 0; // Accept = true
+    }
+
     private void saveEntry() {
         String role = (String) roleBox.getSelectedItem();
         if ("ADMIN".equals(role)) {
@@ -363,13 +389,23 @@ public class VCRTSDashboard {
             String entry = String.format("[%s] ROLE:%s | ID:%s | INFO:%s | DURATION:%d | DEADLINE:%s",
                 dtf.format(arrivalTime), role, id, info, duration, formattedDeadline);
 
-            if ("CLIENT".equals(role)) {
-                Job job = Job.createJob(id, info, duration, arrivalTime, deadlineTime);
-                service.appendJob(job);
+            boolean approved = requestApproval(entry);
+
+            if (approved) {
+                if ("CLIENT".equals(role)) {
+                    Job job = Job.createJob(id, info, duration, arrivalTime, deadlineTime);
+                    service.appendJob(job);
+                }
+
+                service.appendLog(entry);
+                refreshMonitor("FINAL STATUS: ACCEPTED\n\nSaved entry:\n" + entry);
+                clear();
+            } else {
+                refreshMonitor("FINAL STATUS: REJECTED\n\nRejected entry:\n" + entry);
+                JOptionPane.showMessageDialog(frame, "Request rejected. Nothing was saved.");
             }
-            service.appendLog(entry);
-            refreshMonitor("Saved entry:\n" + entry);
-            clear();
+            
+            
         } catch (java.time.format.DateTimeParseException e) {
             JOptionPane.showMessageDialog(frame, "Deadline must use format yyyy/MM/dd HH:mm:ss.");
         } catch (IllegalArgumentException e) {
