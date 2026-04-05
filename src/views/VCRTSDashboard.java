@@ -13,6 +13,7 @@ import services.CloudDataService;
 import services.VCController;
 import services.VCController.JobCompletionRecord;
 
+
 public class VCRTSDashboard {
 
     private final JFrame frame;
@@ -50,9 +51,10 @@ public class VCRTSDashboard {
         // Home panel is the default view, form panel is for submissions, and we can add more as needed
         leftCardContainer.add(createHomePanel(service), "HOME_SCREEN");
         leftCardContainer.add(createSubmissionPanel(), "FORM_SCREEN");
-        leftCardContainer.add(new JPanel(), "PLACEHOLDER"); // Placeholder for future panels like AdminScreen, Analytics, etc.
+        leftCardContainer.add(createAdminScreen(service), "AdminScreen");
+        leftCardContainer.add(createTaskOwnerScreen(service), "TASK_OWNER_SCREEN");
+        leftCardContainer.add(createVehicleOwnerScreen(service), "VEHICLE_OWNER_SCREEN");
         leftCardContainer.setBackground(new Color(30, 30, 35));
-
 
         // 4. Create the Right Panel (Monitor)
         JPanel rightMonitorPanel = createMonitorPanel();
@@ -62,8 +64,10 @@ public class VCRTSDashboard {
         splitPane.setDividerLocation(400); 
         splitPane.setDividerSize(2);
         splitPane.setBorder(null);
-        
         frame.add(splitPane, BorderLayout.CENTER);
+
+        
+
 
         // Initialize state:
         adjustFields();
@@ -82,6 +86,10 @@ public class VCRTSDashboard {
     -DH
     */
 
+    /**
+     * @param service
+     * @return
+     */
     public JPanel createHomePanel(CloudDataService service) {
 
         
@@ -102,7 +110,7 @@ public class VCRTSDashboard {
         gbc.gridy = 0;
         panel.add(welcomeLabel, gbc);
 
-        JLabel subLabel = new JLabel("VCRTS HOME DASHBOARD");
+        JLabel subLabel = new JLabel("VCRTS HOME");
         subLabel.setForeground(Color.GRAY);
         subLabel.setFont(new Font("SansSerif", Font.PLAIN, 14));
 
@@ -129,19 +137,37 @@ public class VCRTSDashboard {
         gbc.gridy = 2;
         gbc.weighty = 0.2;
         gbc.insets = new Insets(20, 0, 10, 0);
-        panel.add(btnOpenForm, gbc);
-
+        panel.add(btnOpenForm, gbc); 
 /* Calculate Completion Times Button was left in for User efficiency 
  This will trigger the logic to calculate and display completion times based on existing job records. -DH
 */
         JButton btnCalcTimes = new JButton("Calculate Completion Times");
         btnCalcTimes.setFont(new Font("SansSerif", Font.BOLD, 14));
         btnCalcTimes.addActionListener(e -> calculateCompletionTimes());
-
-        gbc.gridy = 3;
+        
         gbc.weighty = 0.1;
-        gbc.insets = new Insets(10, 0, 20, 0);
-        panel.add(btnCalcTimes, gbc);
+        gbc.insets = new Insets(10, 0, 20, 0); 
+        gbc.gridy = 3; panel.add(btnCalcTimes, gbc);
+
+
+        JButton taskOwnerBtn = new JButton("Task Owner Portal");
+        taskOwnerBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
+        taskOwnerBtn.addActionListener(e -> showScreen(createTaskOwnerScreen(service)));
+        gbc.gridy = 4;
+        gbc.insets = new Insets(10, 0, 10, 0);
+        panel.add(taskOwnerBtn, gbc);
+
+        JButton vehicleOwnerBtn = new JButton("Vehicle Owner Portal");
+        vehicleOwnerBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
+        vehicleOwnerBtn.addActionListener(e -> showScreen(createVehicleOwnerScreen(service)));
+        gbc.gridy = 5;
+        panel.add(vehicleOwnerBtn, gbc);
+
+        JButton btnAdminScreen = new JButton("Go to Admin Screen");
+        btnAdminScreen.setFont(new Font("SansSerif", Font.BOLD, 14));
+        btnAdminScreen.addActionListener(e -> showScreen(createAdminScreen(service)));
+        gbc.gridy = 6;
+        panel.add(btnAdminScreen, gbc);
 
         JTextArea introMessage = new JTextArea(
             "VCRTS lets users submit jobs, store job data in files, and calculate FIFO completion times.\n\n"
@@ -165,7 +191,12 @@ public class VCRTSDashboard {
         panel.add(introMessage, gbc);
 
         return panel;
+        
     }
+
+
+
+
 
     private JPanel createHeader() {
         JPanel header = new JPanel(new BorderLayout());
@@ -204,8 +235,12 @@ public class VCRTSDashboard {
         // Role Selection
         gbc.gridx = 0; gbc.gridy = 0;
         panel.add(createWhiteLabel("Select Role:"), gbc);
+<<<<<<< HEAD
         
         roleBox = new JComboBox<>(new String[]{"OWNER", "CLIENT", "ADMIN"});
+=======
+        roleBox = new JComboBox<>(new String[]{"CLIENT", "ADMIN"});
+>>>>>>> Test_Branch
         roleBox.addActionListener(e -> adjustFields());
         gbc.gridx = 1; 
         panel.add(roleBox, gbc);
@@ -242,38 +277,208 @@ public class VCRTSDashboard {
         gbc.insets = new Insets(30, 10, 10, 10); // Extra top padding
         panel.add(submitBtn, gbc);
 
+        /*
+        //Calculate Completion Times Button 
         JButton calcBtn = new JButton("Calculate Completion Time");
         calcBtn.addActionListener(e -> calculateCompletionTimes());
         gbc.gridy = 6; gbc.insets = new Insets(10, 10, 10, 10);
-        panel.add(calcBtn, gbc);
+        panel.add(calcBtn, gbc);*/
 
         /*  Home Button to return to the main dashboard/home screen 
             without needing to log out and back in. -DH
         */
         JButton homeBtn = new JButton("Back to Home");
         homeBtn.addActionListener(e -> { 
-            frame.getContentPane().removeAll();
-            frame.add(createHeader(), BorderLayout.NORTH);
-            frame.add(createHomePanel(service), BorderLayout.CENTER);
-            frame.revalidate();
-            frame.repaint();
+            showScreen(createHomePanel(service));
         });
         gbc.gridy = 7; gbc.gridwidth = 2;
         panel.add(homeBtn, gbc);
 
-
         // Spacer to push everything to the top
-        gbc.gridy = 7; gbc.weighty = 1.0;
+        gbc.gridy = 8; gbc.weighty = 1.0;
         panel.add(Box.createGlue(), gbc);
 
         return panel;
     }
 
- public void keypressed(KeyEvent e) {
-            if (e.getKeyCode() == KeyEvent.VK_ENTER) {
-                saveEntry();
+    private void showScreen(JPanel contentPanel) {
+        frame.getContentPane().removeAll();
+        frame.add(createHeader(), BorderLayout.NORTH);
+        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, contentPanel, createMonitorPanel());
+        splitPane.setDividerLocation(400);
+        splitPane.setDividerSize(2);
+        splitPane.setBorder(null);
+        frame.add(splitPane, BorderLayout.CENTER);
+        frame.revalidate();
+        frame.repaint();
+    }
+
+    private JPanel createTaskOwnerScreen(CloudDataService service) {
+        JPanel panel = new JPanel(new GridBagLayout());
+        panel.setBackground(new Color(30, 30, 35));
+        panel.setBorder(new EmptyBorder(20, 20, 20, 20));
+
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.insets = new Insets(10, 10, 10, 10);
+        gbc.weightx = 1.0;
+
+        JLabel title = new JLabel("Task Owner Portal");
+        title.setForeground(Color.CYAN);
+        title.setFont(new Font("SansSerif", Font.BOLD, 24));
+        gbc.gridwidth = 2;
+        panel.add(title, gbc);
+
+        gbc.gridwidth = 1;
+        gbc.gridy = 1;
+        panel.add(createWhiteLabel("Task Owner ID:"), gbc);
+        JTextField ownerIdField = new JTextField();
+        gbc.gridx = 1;
+        panel.add(ownerIdField, gbc);
+
+        gbc.gridx = 0;
+        gbc.gridy = 2;
+        panel.add(createWhiteLabel("Task Description:"), gbc);
+        JTextField taskField = new JTextField();
+        gbc.gridx = 1;
+        panel.add(taskField, gbc);
+
+        gbc.gridx = 0;
+        gbc.gridy = 3;
+        panel.add(createWhiteLabel("Target Vehicle ID:"), gbc);
+        JTextField vehicleField = new JTextField();
+        gbc.gridx = 1;
+        panel.add(vehicleField, gbc);
+
+        gbc.gridx = 0;
+        gbc.gridy = 4;
+        panel.add(createWhiteLabel("Priority Level:"), gbc);
+        JTextField priorityField = new JTextField();
+        gbc.gridx = 1;
+        panel.add(priorityField, gbc);
+
+        gbc.gridx = 0;
+        gbc.gridy = 5;
+        gbc.gridwidth = 2;
+        JButton submitBtn = new JButton("Submit to VC");
+        submitBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
+        submitBtn.addActionListener(e -> {
+            if (ownerIdField.getText().isBlank() || taskField.getText().isBlank() || vehicleField.getText().isBlank() || priorityField.getText().isBlank()) {
+                JOptionPane.showMessageDialog(frame, "Please complete all Task Owner fields.");
+                return;
             }
+            String entry = String.format("[%s] ROLE:TASK_OWNER | ID:%s | TASK:%s | VEHICLE:%s | PRIORITY:%s",
+                dtf.format(LocalDateTime.now()),
+                ownerIdField.getText().trim(),
+                taskField.getText().trim(),
+                vehicleField.getText().trim(),
+                priorityField.getText().trim());
+            try {
+                service.appendLog(entry);
+                refreshMonitor("Task Owner submitted to VC:\n" + entry);
+                JOptionPane.showMessageDialog(frame, "Task Owner request submitted.");
+            } catch (IOException ex) {
+                JOptionPane.showMessageDialog(frame, "Unable to submit Task Owner request.");
+            }
+        });
+        panel.add(submitBtn, gbc);
+
+        gbc.gridy = 6;
+        panel.add(createBackToHomeButton(service), gbc);
+        return panel;
+    }
+
+    private JPanel createVehicleOwnerScreen(CloudDataService service) {
+        JPanel panel = new JPanel(new GridBagLayout());
+        panel.setBackground(new Color(30, 30, 35));
+        panel.setBorder(new EmptyBorder(20, 20, 20, 20));
+
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.insets = new Insets(10, 10, 10, 10);
+        gbc.weightx = 1.0;
+
+        JLabel title = new JLabel("Vehicle Owner Portal");
+        title.setForeground(Color.CYAN);
+        title.setFont(new Font("SansSerif", Font.BOLD, 24));
+        gbc.gridwidth = 2;
+        panel.add(title, gbc);
+
+        gbc.gridwidth = 1;
+        gbc.gridy = 1;
+        panel.add(createWhiteLabel("Owner ID:"), gbc);
+        JTextField ownerIdField = new JTextField();
+        gbc.gridx = 1;
+        panel.add(ownerIdField, gbc);
+
+        gbc.gridx = 0;
+        gbc.gridy = 2;
+        panel.add(createWhiteLabel("Vehicle ID:"), gbc);
+        JTextField vehicleIdField = new JTextField();
+        gbc.gridx = 1;
+        panel.add(vehicleIdField, gbc);
+
+        gbc.gridx = 0;
+        gbc.gridy = 3;
+        panel.add(createWhiteLabel("Status Update:"), gbc);
+        JTextField statusField = new JTextField();
+        gbc.gridx = 1;
+        panel.add(statusField, gbc);
+
+        gbc.gridx = 0;
+        gbc.gridy = 4;
+        panel.add(createWhiteLabel("Availability:"), gbc);
+        JTextField availabilityField = new JTextField();
+        gbc.gridx = 1;
+        panel.add(availabilityField, gbc);
+
+        gbc.gridx = 0;
+        gbc.gridy = 5;
+        gbc.gridwidth = 2;
+        JButton submitBtn = new JButton("Submit to VC");
+        submitBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
+        submitBtn.addActionListener(e -> {
+            if (ownerIdField.getText().isBlank() || vehicleIdField.getText().isBlank() || statusField.getText().isBlank() || availabilityField.getText().isBlank()) {
+                JOptionPane.showMessageDialog(frame, "Please complete all Vehicle Owner fields.");
+                return;
+            }
+            String entry = String.format("[%s] ROLE:VEHICLE_OWNER | ID:%s | VEHICLE:%s | STATUS:%s | AVAILABILITY:%s",
+                dtf.format(LocalDateTime.now()),
+                ownerIdField.getText().trim(),
+                vehicleIdField.getText().trim(),
+                statusField.getText().trim(),
+                availabilityField.getText().trim());
+            try {
+                service.appendLog(entry);
+                refreshMonitor("Vehicle Owner update submitted to VC:\n" + entry);
+                JOptionPane.showMessageDialog(frame, "Vehicle Owner submission sent.");
+            } catch (IOException ex) {
+                JOptionPane.showMessageDialog(frame, "Unable to submit Vehicle Owner update.");
+            }
+        });
+        panel.add(submitBtn, gbc);
+
+        gbc.gridy = 6;
+        panel.add(createBackToHomeButton(service), gbc);
+        return panel;
+    }
+
+    private JButton createBackToHomeButton(CloudDataService service) {
+        JButton backBtn = new JButton("Back to Home");
+        backBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
+        backBtn.addActionListener(e -> showScreen(createHomePanel(service)));
+        return backBtn;
+    }
+
+    public void keypressed(KeyEvent e) {
+        if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+            saveEntry();
         }
+    }
 
     private JPanel createMonitorPanel() {
         JPanel panel = new JPanel(new BorderLayout());
@@ -453,4 +658,58 @@ public class VCRTSDashboard {
     private void clear() {
         idField.setText(""); infoField.setText(""); durField.setText(""); deadlineField.setText("");
     }
+<<<<<<< HEAD
+=======
+
+    // Admin Screen
+    public JPanel createAdminScreen(CloudDataService service) {
+        JPanel adminPanel = new JPanel(new GridBagLayout());
+        adminPanel.setBackground(new Color(30, 30, 35));
+        adminPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.gridwidth = 2;
+        gbc.anchor = GridBagConstraints.CENTER;
+        gbc.insets = new Insets(10, 10, 10, 10);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.weightx = 1.0;
+
+        JLabel titleLabel = new JLabel("Admin Screen");
+        titleLabel.setForeground(Color.black);
+        titleLabel.setFont(new Font("SansSerif", Font.BOLD, 24));
+        titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        adminPanel.add(titleLabel, gbc);
+
+        gbc.gridy = 1;
+        gbc.gridwidth = 2;
+        JButton btnCalcTimes = new JButton("Calculate Completion Times");
+        btnCalcTimes.setFont(new Font("SansSerif", Font.BOLD, 14));
+        btnCalcTimes.setBackground(new Color(70, 130, 180));
+        btnCalcTimes.setForeground(Color.RED);
+        btnCalcTimes.addActionListener(e -> calculateCompletionTimes());
+        adminPanel.add(btnCalcTimes, gbc);
+
+        gbc.gridy = 2;
+        JButton acceptBtn = new JButton("Accept Job");
+        acceptBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
+        acceptBtn.addActionListener(e -> JOptionPane.showMessageDialog(frame, "Job Accepted!"));
+        adminPanel.add(acceptBtn, gbc);
+
+        gbc.gridy = 3;
+        JButton rejectBtn = new JButton("Reject Job");
+        rejectBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
+        rejectBtn.addActionListener(e -> JOptionPane.showMessageDialog(frame, "Job Rejected!"));
+        adminPanel.add(rejectBtn, gbc);
+
+        gbc.gridy = 4;
+        JButton backBtn = new JButton("Back to Home");
+        backBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
+        backBtn.addActionListener(e -> showScreen(createHomePanel(service)));
+        adminPanel.add(backBtn, gbc);
+
+        return adminPanel;
+    }
+>>>>>>> Test_Branch
 }

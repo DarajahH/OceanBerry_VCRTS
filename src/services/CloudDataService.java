@@ -94,55 +94,6 @@ public class CloudDataService {
         return false;
     }
 
-    public boolean userExists(String username) throws IOException {
-        String cleanUsername = username == null ? "" : username.trim();
-        if (cleanUsername.isEmpty() || !Files.exists(userPath)) {
-            return false;
-        }
-
-        List<String> users = Files.readAllLines(userPath, StandardCharsets.UTF_8);
-        for (String line : users) {
-            int separatorIndex = line.indexOf(':');
-            if (separatorIndex <= 0) {
-                continue;
-            }
-            String existingUsername = line.substring(0, separatorIndex).trim();
-            if (existingUsername.equals(cleanUsername)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    public void appendJob(Job job) throws IOException {
-        if (job == null) {
-            return;
-        }
-
-        Files.writeString(
-            jobPath,
-            serializeJob(job) + System.lineSeparator(),
-            StandardCharsets.UTF_8,
-            StandardOpenOption.CREATE,
-            StandardOpenOption.APPEND
-        );
-    }
-
-    public List<Job> readJobs() throws IOException {
-        if (!Files.exists(jobPath)) {
-            return Collections.emptyList();
-        }
-
-        List<Job> jobs = new ArrayList<>();
-        for (String line : Files.readAllLines(jobPath, StandardCharsets.UTF_8)) {
-            Job job = parseJobLine(line);
-            if (job != null) {
-                jobs.add(job);
-            }
-        }
-        return jobs;
-    }
-
     public List<String> readClientLogs() throws IOException {
         List<String> clientLogs = new ArrayList<>();
         for (String line : readAllLogs()) {
