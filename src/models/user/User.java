@@ -8,7 +8,7 @@ public class User {
     private String name;
 
     public User() {
-        private
+        
     }
 
     public boolean login(String username, String password) {
@@ -16,6 +16,6 @@ public class User {
     }
 
     public void logout() {
-
+        
     }
 }

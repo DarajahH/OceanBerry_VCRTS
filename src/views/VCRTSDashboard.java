@@ -9,7 +9,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-import models.job.Job;
 import services.CloudDataService;
 import services.VCController;
 import services.VCController.JobCompletionRecord;
@@ -52,7 +51,7 @@ public class VCRTSDashboard {
         // Home panel is the default view, form panel is for submissions, and we can add more as needed
         leftCardContainer.add(createHomePanel(service), "HOME_SCREEN");
         leftCardContainer.add(createSubmissionPanel(), "FORM_SCREEN");
-        leftCardContainer.add(createAdminScreen(service), "AdminScreen");
+        leftCardContainer.add(createAdminScreen(service), "ADMIN_SCREEN");
         leftCardContainer.add(createTaskOwnerScreen(service), "TASK_OWNER_SCREEN");
         leftCardContainer.add(createVehicleOwnerScreen(service), "VEHICLE_OWNER_SCREEN");
         leftCardContainer.setBackground(new Color(30, 30, 35));
@@ -195,8 +194,55 @@ public class VCRTSDashboard {
         
     }
 
+    public JPanel createAdminScreen(CloudDataService service) {
+        JPanel adminPanel = new JPanel(new GridBagLayout());
+        adminPanel.setBackground(new Color(30, 30, 35));
+        adminPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.gridwidth = 2;
+        gbc.anchor = GridBagConstraints.CENTER;
+        gbc.insets = new Insets(10, 10, 10, 10);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.weightx = 1.0;
 
+        JLabel titleLabel = new JLabel("Admin Screen");
+        titleLabel.setForeground(Color.black);
+        titleLabel.setFont(new Font("SansSerif", Font.BOLD, 24));
+        titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        adminPanel.add(titleLabel, gbc);
+
+        gbc.gridy = 1;
+        gbc.gridwidth = 2;
+        JButton btnCalcTimes = new JButton("Calculate Completion Times");
+        btnCalcTimes.setFont(new Font("SansSerif", Font.BOLD, 14));
+        btnCalcTimes.setBackground(new Color(70, 130, 180));
+        btnCalcTimes.setForeground(Color.RED);
+        btnCalcTimes.addActionListener(e -> calculateCompletionTimes());
+        adminPanel.add(btnCalcTimes, gbc);
+
+        gbc.gridy = 2;
+        JButton acceptBtn = new JButton("Accept Job");
+        acceptBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
+        acceptBtn.addActionListener(e -> JOptionPane.showMessageDialog(frame, "Job Accepted!"));
+        adminPanel.add(acceptBtn, gbc);
+
+        gbc.gridy = 3;
+        JButton rejectBtn = new JButton("Reject Job");
+        rejectBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
+        rejectBtn.addActionListener(e -> JOptionPane.showMessageDialog(frame, "Job Rejected!"));
+        adminPanel.add(rejectBtn, gbc);
+
+        gbc.gridy = 4;
+        JButton backBtn = new JButton("Back to Home");
+        backBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
+        backBtn.addActionListener(e -> showScreen(createHomePanel(service)));
+        adminPanel.add(backBtn, gbc);
+
+        return adminPanel;
+    }
 
 
     private JPanel createHeader() {
@@ -673,58 +719,5 @@ public class VCRTSDashboard {
     private void clear() {
         idField.setText(""); infoField.setText(""); durField.setText(""); deadlineField.setText("");
     }
-<<<<<<< HEAD
-=======
 
-    // Admin Screen - DH
-    public JPanel createAdminScreen(CloudDataService service) {
-        JPanel adminPanel = new JPanel(new GridBagLayout());
-        adminPanel.setBackground(new Color(30, 30, 35));
-        adminPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
-
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        gbc.gridwidth = 2;
-        gbc.anchor = GridBagConstraints.CENTER;
-        gbc.insets = new Insets(10, 10, 10, 10);
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.weightx = 1.0;
-
-        JLabel titleLabel = new JLabel("Admin Screen");
-        titleLabel.setForeground(Color.black);
-        titleLabel.setFont(new Font("SansSerif", Font.BOLD, 24));
-        titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
-        adminPanel.add(titleLabel, gbc);
-
-        gbc.gridy = 1;
-        gbc.gridwidth = 2;
-        JButton btnCalcTimes = new JButton("Calculate Completion Times");
-        btnCalcTimes.setFont(new Font("SansSerif", Font.BOLD, 14));
-        btnCalcTimes.setBackground(new Color(70, 130, 180));
-        btnCalcTimes.setForeground(Color.RED);
-        btnCalcTimes.addActionListener(e -> calculateCompletionTimes());
-        adminPanel.add(btnCalcTimes, gbc);
-
-        gbc.gridy = 2;
-        JButton acceptBtn = new JButton("Accept Job");
-        acceptBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
-        acceptBtn.addActionListener(e -> JOptionPane.showMessageDialog(frame, "Job Accepted!"));
-        adminPanel.add(acceptBtn, gbc);
-
-        gbc.gridy = 3;
-        JButton rejectBtn = new JButton("Reject Job");
-        rejectBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
-        rejectBtn.addActionListener(e -> JOptionPane.showMessageDialog(frame, "Job Rejected!"));
-        adminPanel.add(rejectBtn, gbc);
-
-        gbc.gridy = 4;
-        JButton backBtn = new JButton("Back to Home");
-        backBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
-        backBtn.addActionListener(e -> showScreen(createHomePanel(service)));
-        adminPanel.add(backBtn, gbc);
-
-        return adminPanel;
-    }
->>>>>>> Test_Branch
 }
