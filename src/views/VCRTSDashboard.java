@@ -6,8 +6,8 @@ import java.io.*;
 import java.net.Socket;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Map;
 import java.util.List;
+import java.util.Map;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import services.CloudDataService;
@@ -173,13 +173,13 @@ public class VCRTSDashboard {
         gbc.gridy = 6;
         panel.add(btnAdminScreen, gbc);
 
-        JTextArea introMessage = new JTextArea(
-            "VCRTS lets users submit jobs, store job data in files, and calculate FIFO completion times.\n\n"
-            + "How to proceed:\n"
-            + "1. Click \"Submit New Transaction\"\n"
-            + "2. Enter Job ID, description, duration, and deadline\n"
-            + "3. Submit the entry\n"
-            + "4. Click \"Calculate Completion Times\" to view results"
+        /*JTextArea introMessage = new JTextArea(
+            "VCRTS lets users submit jobs, store job data in files, and calculate FIFO completion times.\n\n" +
+            "How to proceed:\n" +
+            "1. Click \"Submit New Transaction\"\n" +
+            "2. Enter Job ID, description, duration, and deadline\n" +
+            "3. Submit the entry\n" +
+            "4. Click \"Calculate Completion Times\" to view results"
         );
         introMessage.setEditable(false);
         introMessage.setLineWrap(true);
@@ -189,11 +189,11 @@ public class VCRTSDashboard {
         introMessage.setFont(new Font("SansSerif", Font.PLAIN, 12));
         introMessage.setBorder(null);
 
-        gbc.gridy = 4;
+        gbc.gridy = 7;
         gbc.weighty = 0.3;
         gbc.insets = new Insets(20, 20, 20, 20);
         panel.add(introMessage, gbc);
-
+*/
         return panel;
         
     }
