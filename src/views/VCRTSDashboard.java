@@ -66,9 +66,6 @@ public class VCRTSDashboard {
         splitPane.setBorder(null);
         frame.add(splitPane, BorderLayout.CENTER);
 
-        
-
-
         // Initialize state:
         adjustFields();
         refreshMonitor(null);
@@ -185,7 +182,7 @@ public class VCRTSDashboard {
         introMessage.setFont(new Font("SansSerif", Font.PLAIN, 12));
         introMessage.setBorder(null);
 
-        gbc.gridy = 4;
+        gbc.gridy = 7;
         gbc.weighty = 0.3;
         gbc.insets = new Insets(20, 20, 20, 20);
         panel.add(introMessage, gbc);

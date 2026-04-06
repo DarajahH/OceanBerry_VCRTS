@@ -15,4 +15,17 @@ public enum JobStatus {
     public String getDescription() {
         return this.desc;
     }
+
+    public static JobStatus fromString(String status) {
+        for (JobStatus s : JobStatus.values()) {
+            if (s.name().equalsIgnoreCase(status)) {
+                return s;
+            }
+        }
+        return null;
+    }
+
+    public static String toString(JobStatus status) {
+        return status == null ? "" : status.name();
+    }
 }

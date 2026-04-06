@@ -3,17 +3,15 @@ package app;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
-import javax.swing.*;
-import services.CloudDataService;
-import models.job.Job;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import javax.swing.*;
+import models.job.Job;
+import services.CloudDataService;
 
 public class ServerMain {
 
     static ServerSocket serverSocket;
-    static DataInputStream inputStream;
-    static DataOutputStream outputStream;
 
     private static final DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss");
 
@@ -56,9 +54,9 @@ public class ServerMain {
 
         try {
             // Read message (from client)
-            inputStream = new DataInputStream(socket.getInputStream());
-            outputStream = new DataOutputStream(socket.getOutputStream());
-
+            DataInputStream inputStream = new DataInputStream(socket.getInputStream());
+            DataOutputStream outputStream = new DataOutputStream(socket.getOutputStream());
+            
             // Read the submission entry from client
             String entry = inputStream.readUTF();
             System.out.println("Request received from client: \"" + entry + "\"");
