@@ -8,6 +8,7 @@ import services.CloudDataService;
 import models.job.Job;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.UUID;
 
 public class ServerMain {
 
@@ -67,21 +68,12 @@ public class ServerMain {
             outputStream.writeUTF("ACK");
             System.out.println("ACK sent to client.");
 
-            // Step 2: VC Controller decision (Accept/Reject)
-            String[] options = {"Accept", "Reject"};
+            String requestId = UUID.randomUUID().toString();
+            service.clearAdminDecision();
+            service.writePendingRequest(requestId, entry);
+            System.out.println("Pending admin review for request " + requestId);
 
-            int decision = JOptionPane.showOptionDialog(
-                null,
-                "VC Controller Review:\n\n" + entry + "\n\nAccept or Reject this request?",
-                "VC Controller Decision",
-                JOptionPane.DEFAULT_OPTION,
-                JOptionPane.QUESTION_MESSAGE,
-                null,
-                options,
-                options[0]
-            );
-
-            boolean accepted = (decision == 0);
+            boolean accepted = waitForAdminDecision(service, requestId);
 
             if (accepted) {
                 //  decide if we save a job ! ! ! ! ! ! ! ! ! !!! !! ! 
@@ -107,6 +99,9 @@ public class ServerMain {
                 outputStream.writeUTF("REJECTED");
                 System.out.println("Request REJECTED. Nothing saved.");
             }
+
+            service.clearPendingRequest();
+            service.clearAdminDecision();
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -137,5 +132,19 @@ public class ServerMain {
             }
         }
         return "";
+    }
+
+    private static boolean waitForAdminDecision(CloudDataService service, String requestId)
+        throws IOException, InterruptedException {
+        while (true) {
+            String decision = service.readAdminDecision(requestId);
+            if ("ACCEPTED".equalsIgnoreCase(decision)) {
+                return true;
+            }
+            if ("REJECTED".equalsIgnoreCase(decision)) {
+                return false;
+            }
+            Thread.sleep(250);
+        }
     }
 }

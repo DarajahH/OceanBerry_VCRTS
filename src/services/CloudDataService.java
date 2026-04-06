@@ -20,6 +20,8 @@ public class CloudDataService {
     private final Path logPath;
     private final Path userPath;
     private final Path jobPath;
+    private final Path pendingRequestPath;
+    private final Path adminDecisionPath;
 
     public CloudDataService(Path logPath, Path userPath) {
         this(logPath, userPath, logPath.resolveSibling("jobs.txt"));
@@ -29,6 +31,8 @@ public class CloudDataService {
         this.logPath = logPath;
         this.userPath = userPath;
         this.jobPath = jobPath;
+        this.pendingRequestPath = logPath.resolveSibling("pending_request.txt");
+        this.adminDecisionPath = logPath.resolveSibling("admin_decision.txt");
     }
 
     public void appendLog(String entry) throws IOException {
@@ -192,6 +196,81 @@ public class CloudDataService {
         }
 
         return fields;
+    }
+
+    public synchronized void writePendingRequest(String requestId, String entry) throws IOException {
+        String payload = "REQUEST_ID:" + encodeField(requestId) + System.lineSeparator()
+            + "ENTRY:" + encodeField(entry) + System.lineSeparator();
+        Files.writeString(
+            pendingRequestPath,
+            payload,
+            StandardCharsets.UTF_8,
+            StandardOpenOption.CREATE,
+            StandardOpenOption.TRUNCATE_EXISTING
+        );
+    }
+
+    public synchronized Map<String, String> readPendingRequest() throws IOException {
+        if (!Files.exists(pendingRequestPath)) {
+            return Collections.emptyMap();
+        }
+
+        List<String> lines = Files.readAllLines(pendingRequestPath, StandardCharsets.UTF_8);
+        Map<String, String> pending = new LinkedHashMap<>();
+        for (String line : lines) {
+            int separatorIndex = line.indexOf(':');
+            if (separatorIndex <= 0) {
+                continue;
+            }
+            String key = line.substring(0, separatorIndex).trim();
+            String value = decodeField(line.substring(separatorIndex + 1).trim());
+            pending.put(key, value);
+        }
+        return pending;
+    }
+
+    public synchronized void clearPendingRequest() throws IOException {
+        Files.deleteIfExists(pendingRequestPath);
+    }
+
+    public synchronized void writeAdminDecision(String requestId, String decision) throws IOException {
+        String payload = "REQUEST_ID:" + encodeField(requestId) + System.lineSeparator()
+            + "DECISION:" + encodeField(decision) + System.lineSeparator();
+        Files.writeString(
+            adminDecisionPath,
+            payload,
+            StandardCharsets.UTF_8,
+            StandardOpenOption.CREATE,
+            StandardOpenOption.TRUNCATE_EXISTING
+        );
+    }
+
+    public synchronized String readAdminDecision(String requestId) throws IOException {
+        if (!Files.exists(adminDecisionPath)) {
+            return null;
+        }
+
+        Map<String, String> decisionEntry = new LinkedHashMap<>();
+        List<String> lines = Files.readAllLines(adminDecisionPath, StandardCharsets.UTF_8);
+        for (String line : lines) {
+            int separatorIndex = line.indexOf(':');
+            if (separatorIndex <= 0) {
+                continue;
+            }
+            String key = line.substring(0, separatorIndex).trim();
+            String value = decodeField(line.substring(separatorIndex + 1).trim());
+            decisionEntry.put(key, value);
+        }
+
+        if (!requestId.equals(decisionEntry.get("REQUEST_ID"))) {
+            return null;
+        }
+
+        return decisionEntry.get("DECISION");
+    }
+
+    public synchronized void clearAdminDecision() throws IOException {
+        Files.deleteIfExists(adminDecisionPath);
     }
 
     //Serializes a job object to a string - NAEEM

@@ -6,6 +6,7 @@ import java.io.*;
 import java.net.Socket;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Map;
 import java.util.List;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -29,6 +30,9 @@ public class VCRTSDashboard {
     private JTextField idField, infoField, durField, deadlineField;
     private JLabel idLabel, infoLabel, durLabel, deadlineLabel;
     private JTextArea monitorArea;
+    private JTextArea adminRequestArea;
+    private JLabel adminRequestStatusLabel;
+    private Timer adminRefreshTimer;
 
     public VCRTSDashboard(CloudDataService service) {
        this.service = service;
@@ -215,6 +219,23 @@ public class VCRTSDashboard {
         adminPanel.add(titleLabel, gbc);
 
         gbc.gridy = 1;
+        adminRequestStatusLabel = new JLabel("Waiting for client request...");
+        adminRequestStatusLabel.setForeground(Color.WHITE);
+        adminRequestStatusLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        adminPanel.add(adminRequestStatusLabel, gbc);
+
+        gbc.gridy = 2;
+        adminRequestArea = new JTextArea(8, 24);
+        adminRequestArea.setEditable(false);
+        adminRequestArea.setLineWrap(true);
+        adminRequestArea.setWrapStyleWord(true);
+        adminRequestArea.setBackground(Color.BLACK);
+        adminRequestArea.setForeground(Color.GREEN);
+        adminRequestArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
+        JScrollPane pendingScrollPane = new JScrollPane(adminRequestArea);
+        adminPanel.add(pendingScrollPane, gbc);
+
+        gbc.gridy = 3;
         gbc.gridwidth = 2;
         JButton btnCalcTimes = new JButton("Calculate Completion Times");
         btnCalcTimes.setFont(new Font("SansSerif", Font.BOLD, 14));
@@ -223,23 +244,29 @@ public class VCRTSDashboard {
         btnCalcTimes.addActionListener(e -> calculateCompletionTimes());
         adminPanel.add(btnCalcTimes, gbc);
 
-        gbc.gridy = 2;
+        gbc.gridy = 4;
         JButton acceptBtn = new JButton("Accept Job");
         acceptBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
-        acceptBtn.addActionListener(e -> JOptionPane.showMessageDialog(frame, "Job Accepted!"));
+        acceptBtn.addActionListener(e -> submitAdminDecision("ACCEPTED"));
         adminPanel.add(acceptBtn, gbc);
 
-        gbc.gridy = 3;
+        gbc.gridy = 5;
         JButton rejectBtn = new JButton("Reject Job");
         rejectBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
-        rejectBtn.addActionListener(e -> JOptionPane.showMessageDialog(frame, "Job Rejected!"));
+        rejectBtn.addActionListener(e -> submitAdminDecision("REJECTED"));
         adminPanel.add(rejectBtn, gbc);
 
-        gbc.gridy = 4;
+        gbc.gridy = 6;
         JButton backBtn = new JButton("Back to Home");
         backBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
-        backBtn.addActionListener(e -> showScreen(createHomePanel(service)));
+        backBtn.addActionListener(e -> {
+            stopAdminRefreshTimer();
+            showScreen(createHomePanel(service));
+        });
         adminPanel.add(backBtn, gbc);
+
+        startAdminRefreshTimer();
+        refreshPendingAdminRequest();
 
         return adminPanel;
     }
@@ -714,6 +741,63 @@ public class VCRTSDashboard {
             monitorArea.setText(display.toString());
             monitorArea.setCaretPosition(monitorArea.getDocument().getLength()); // Auto-scroll to bottom
         } catch (IOException ignored) {}
+    }
+
+    private void startAdminRefreshTimer() {
+        stopAdminRefreshTimer();
+        adminRefreshTimer = new Timer(1000, e -> refreshPendingAdminRequest());
+        adminRefreshTimer.start();
+    }
+
+    private void stopAdminRefreshTimer() {
+        if (adminRefreshTimer != null) {
+            adminRefreshTimer.stop();
+            adminRefreshTimer = null;
+        }
+    }
+
+    private void refreshPendingAdminRequest() {
+        if (adminRequestArea == null || adminRequestStatusLabel == null) {
+            return;
+        }
+
+        try {
+            Map<String, String> pendingRequest = service.readPendingRequest();
+            String entry = pendingRequest.get("ENTRY");
+
+            if (entry == null || entry.isBlank()) {
+                adminRequestStatusLabel.setText("Waiting for client request...");
+                adminRequestArea.setText("No pending client request.");
+                return;
+            }
+
+            adminRequestStatusLabel.setText("Pending client request");
+            adminRequestArea.setText(entry);
+            adminRequestArea.setCaretPosition(0);
+        } catch (IOException e) {
+            adminRequestStatusLabel.setText("Unable to load pending request");
+            adminRequestArea.setText("Error reading pending request.");
+        }
+    }
+
+    private void submitAdminDecision(String decision) {
+        try {
+            Map<String, String> pendingRequest = service.readPendingRequest();
+            String requestId = pendingRequest.get("REQUEST_ID");
+            String entry = pendingRequest.get("ENTRY");
+
+            if (requestId == null || requestId.isBlank() || entry == null || entry.isBlank()) {
+                JOptionPane.showMessageDialog(frame, "No pending client request.");
+                return;
+            }
+
+            service.writeAdminDecision(requestId, decision);
+            adminRequestStatusLabel.setText("Last response sent: " + decision);
+            adminRequestArea.setText(entry + "\n\nDecision sent: " + decision);
+            refreshMonitor("Admin decision sent for request:\n" + entry + "\nSTATUS: " + decision);
+        } catch (IOException e) {
+            JOptionPane.showMessageDialog(frame, "Unable to send admin decision.");
+        }
     }
 
     private void clear() {
