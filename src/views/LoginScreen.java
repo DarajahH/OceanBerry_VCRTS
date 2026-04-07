@@ -9,13 +9,10 @@ import javax.swing.JOptionPane;
 import javax.swing.JPasswordField;
 import javax.swing.JTextField;
 import services.CloudDataService;
-import services.RequestClientService;
-import services.VCController;
+
 public class LoginScreen {
 
     private final CloudDataService service;
-    private final RequestClientService requestClientService;
-    private final VCController controller;
     private final JFrame frame;
 
     public LoginScreen(CloudDataService service) {
@@ -47,13 +44,12 @@ public class LoginScreen {
         frame.add(regBtn, gbc);
 
       loginBtn.addActionListener(e -> {
-            // USING INSTANCE METHOD
             String username = userField.getText().trim();
             String password = new String(passField.getPassword()).trim();
 
-            if (dataService.validateUser(username, password)) {
+            if (service.validateUser(username, password)) {
                 frame.dispose();
-                new VCRTSDashboard(dataService, requestClientService, controller);
+                new VCRTSDashboard(service);
             } else {
                 JOptionPane.showMessageDialog(frame, "Invalid credentials.");
             }
@@ -70,7 +66,7 @@ public class LoginScreen {
             }
 
             try {
-                dataService.registerUser(username, password);
+                service.registerUser(username, password);
                 JOptionPane.showMessageDialog(frame, "Account created.");
             } catch (IllegalArgumentException ex) {
                 JOptionPane.showMessageDialog(frame, ex.getMessage());

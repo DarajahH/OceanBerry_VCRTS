@@ -14,15 +14,9 @@ public class RequestClientService {
             DataOutputStream outputStream = new DataOutputStream(socket.getOutputStream());
             DataInputStream inputStream = new DataInputStream(socket.getInputStream());
         ) {
-            // Send the entry to the server
             outputStream.writeUTF(entry);
-
-            // Wait for the server's response
-            DataOutputStream out = new DataOutputStream(socket.getOutputStream());
-            DataInputStream in = new DataInputStream(socket.getInputStream());
-
-            String ack = inreadUTF();
-            String decision = in.readUTF();
+            String ack = inputStream.readUTF();
+            String decision = inputStream.readUTF();
 
             return new RequestResult(ack, decision);
         } catch (ConnectException e) {

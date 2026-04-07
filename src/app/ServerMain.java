@@ -82,7 +82,6 @@ public class ServerMain {
             boolean accepted = (decision == 0);
 
             if (accepted) {
-                //  decide if we save a job ! ! ! ! ! ! ! ! ! !!! !! ! 
                 String role = parseField(entry, "ROLE");
                 if ("CLIENT".equals(role)) {
                     String id = parseField(entry, "ID");
@@ -96,6 +95,22 @@ public class ServerMain {
 
                     Job job = Job.createJob(id, info, duration, arrivalTime, deadlineTime);
                     service.appendJob(job);
+                } else if ("TASK_OWNER".equals(role)) {
+                    service.appendTaskOwnerRequest(
+                        parseField(entry, "ID"),
+                        parseField(entry, "TASK"),
+                        parseField(entry, "VEHICLE"),
+                        parseField(entry, "PRIORITY"),
+                        LocalDateTime.now().format(dtf)
+                    );
+                } else if ("VEHICLE_OWNER".equals(role)) {
+                    service.appendVehicleOwnerRequest(
+                        parseField(entry, "ID"),
+                        parseField(entry, "VEHICLE"),
+                        parseField(entry, "STATUS"),
+                        parseField(entry, "AVAILABILITY"),
+                        LocalDateTime.now().format(dtf)
+                    );
                 }
 
                 service.appendLog(entry);

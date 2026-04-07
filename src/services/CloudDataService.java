@@ -20,6 +20,8 @@ public class CloudDataService {
     private final Path logPath;
     private final Path userPath;
     private final Path jobPath;
+    private final Path taskOwnerPath;
+    private final Path vehicleOwnerPath;
 
     public CloudDataService(Path logPath, Path userPath) {
         this(logPath, userPath, logPath.resolveSibling("jobs.txt"));
@@ -29,6 +31,8 @@ public class CloudDataService {
         this.logPath = logPath;
         this.userPath = userPath;
         this.jobPath = jobPath;
+        this.taskOwnerPath = logPath.resolveSibling("task_owner_requests.txt");
+        this.vehicleOwnerPath = logPath.resolveSibling("vehicle_owner_requests.txt");
     }
 
     public void appendLog(String entry) throws IOException {
@@ -144,6 +148,136 @@ public class CloudDataService {
         return jobs;
     }
 
+    public List<String> readJobSummaries() throws IOException {
+        List<String> summaries = new ArrayList<>();
+        for (Job job : readJobs()) {
+            summaries.add(formatJobSummary(job));
+        }
+        return summaries;
+    }
+
+    public void appendTaskOwnerRequest(
+        String ownerId,
+        String task,
+        String vehicleId,
+        String priority,
+        String timestamp
+    ) throws IOException {
+        String entry = String.join(
+            JOB_FIELD_DELIMITER,
+            encodeField(ownerId),
+            encodeField(task),
+            encodeField(vehicleId),
+            encodeField(priority),
+            encodeField(timestamp)
+        ) + System.lineSeparator();
+
+        Files.writeString(
+            taskOwnerPath,
+            entry,
+            StandardCharsets.UTF_8,
+            StandardOpenOption.CREATE,
+            StandardOpenOption.APPEND
+        );
+    }
+
+    public void appendVehicleOwnerRequest(
+        String ownerId,
+        String vehicleId,
+        String status,
+        String availability,
+        String timestamp
+    ) throws IOException {
+        String entry = String.join(
+            JOB_FIELD_DELIMITER,
+            encodeField(ownerId),
+            encodeField(vehicleId),
+            encodeField(status),
+            encodeField(availability),
+            encodeField(timestamp)
+        ) + System.lineSeparator();
+
+        Files.writeString(
+            vehicleOwnerPath,
+            entry,
+            StandardCharsets.UTF_8,
+            StandardOpenOption.CREATE,
+            StandardOpenOption.APPEND
+        );
+    }
+
+    public List<String> readTaskOwnerSummaries() throws IOException {
+        if (!Files.exists(taskOwnerPath)) {
+            return Collections.emptyList();
+        }
+
+        List<String> summaries = new ArrayList<>();
+        for (String line : Files.readAllLines(taskOwnerPath, StandardCharsets.UTF_8)) {
+            if (line.isBlank()) {
+                continue;
+            }
+
+            String[] fields = line.split(JOB_FIELD_DELIMITER, -1);
+            if (fields.length < 5) {
+                continue;
+            }
+
+            summaries.add(String.format(
+                "Task Owner ID: %s | Task: %s | Vehicle: %s | Priority: %s | Timestamp: %s",
+                decodeField(fields[0]),
+                decodeField(fields[1]),
+                decodeField(fields[2]),
+                decodeField(fields[3]),
+                decodeField(fields[4])
+            ));
+        }
+        return summaries;
+    }
+
+    public List<String> readVehicleOwnerSummaries() throws IOException {
+        if (!Files.exists(vehicleOwnerPath)) {
+            return Collections.emptyList();
+        }
+
+        List<String> summaries = new ArrayList<>();
+        for (String line : Files.readAllLines(vehicleOwnerPath, StandardCharsets.UTF_8)) {
+            if (line.isBlank()) {
+                continue;
+            }
+
+            String[] fields = line.split(JOB_FIELD_DELIMITER, -1);
+            if (fields.length < 5) {
+                continue;
+            }
+
+            summaries.add(String.format(
+                "Owner ID: %s | Vehicle: %s | Status: %s | Availability: %s | Timestamp: %s",
+                decodeField(fields[0]),
+                decodeField(fields[1]),
+                decodeField(fields[2]),
+                decodeField(fields[3]),
+                decodeField(fields[4])
+            ));
+        }
+        return summaries;
+    }
+
+    public List<String> readAllSavedRequestSummaries() throws IOException {
+        List<String> summaries = new ArrayList<>();
+
+        for (String job : readJobSummaries()) {
+            summaries.add("[CLIENT] " + job);
+        }
+        for (String taskOwner : readTaskOwnerSummaries()) {
+            summaries.add("[TASK_OWNER] " + taskOwner);
+        }
+        for (String vehicleOwner : readVehicleOwnerSummaries()) {
+            summaries.add("[VEHICLE_OWNER] " + vehicleOwner);
+        }
+
+        return summaries;
+    }
+
     public List<String> readClientLogs() throws IOException {
         List<String> clientLogs = new ArrayList<>();
         for (String line : readAllLogs()) {
@@ -192,6 +326,27 @@ public class CloudDataService {
         }
 
         return fields;
+    }
+
+    public String formatJobSummary(Job job) {
+        if (job == null) {
+            return "";
+        }
+
+        String deadline = job.getDeadline() == null ? "N/A" : job.getDeadline().toString();
+        String completionTime = job.getCompletionTime() == null
+            ? "Pending"
+            : Integer.toString(job.getCompletionTime());
+
+        return String.format(
+            "Job ID: %s | Description: %s | Duration: %d | Deadline: %s | Status: %s | Completion: %s",
+            job.getJobId(),
+            job.getDescription(),
+            job.getDuration(),
+            deadline,
+            job.getStatus(),
+            completionTime
+        );
     }
 
     //Serializes a job object to a string - NAEEM
