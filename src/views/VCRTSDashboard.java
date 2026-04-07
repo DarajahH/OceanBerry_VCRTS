@@ -305,7 +305,7 @@ public class VCRTSDashboard {
         gbc.gridx = 1; panel.add(durField, gbc);
 
         gbc.gridx = 0; gbc.gridy = 4;
-        deadlineLabel = createWhiteLabel("Job Deadline (YYYY-MM-DD HR:MM:SS):");
+        deadlineLabel = createWhiteLabel("Job Deadline (yyyy/MM/dd HH:mm:ss):");
         panel.add(deadlineLabel, gbc);
         deadlineField = new JTextField();
         gbc.gridx = 1; panel.add(deadlineField, gbc);
@@ -417,13 +417,8 @@ public class VCRTSDashboard {
                 taskField.getText().trim(),
                 vehicleField.getText().trim(),
                 priorityField.getText().trim());
-            try {
-                service.appendLog(entry);
-                refreshMonitor("Task Owner submitted to VC:\n" + entry);
-                JOptionPane.showMessageDialog(frame, "Task Owner request submitted.");
-            } catch (IOException ex) {
-                JOptionPane.showMessageDialog(frame, "Unable to submit Task Owner request.");
-            }
+
+                sendRequestToServer(entry);
         });
         panel.add(submitBtn, gbc);
 
@@ -494,13 +489,9 @@ public class VCRTSDashboard {
                 vehicleIdField.getText().trim(),
                 statusField.getText().trim(),
                 availabilityField.getText().trim());
-            try {
-                service.appendLog(entry);
-                refreshMonitor("Vehicle Owner update submitted to VC:\n" + entry);
-                JOptionPane.showMessageDialog(frame, "Vehicle Owner submission sent.");
-            } catch (IOException ex) {
-                JOptionPane.showMessageDialog(frame, "Unable to submit Vehicle Owner update.");
-            }
+
+                sendRequestToServer(entry);
+
         });
         panel.add(submitBtn, gbc);
 
@@ -717,4 +708,28 @@ public class VCRTSDashboard {
         idField.setText(""); infoField.setText(""); durField.setText(""); deadlineField.setText("");
     }
 
+    private void sendRequestToServer(String entry) {
+    try (Socket socket = new Socket("localhost", 9806);
+         DataOutputStream out = new DataOutputStream(socket.getOutputStream());
+         DataInputStream in = new DataInputStream(socket.getInputStream())) {
+
+        refreshMonitor("Connecting to VC Controller server...");
+        out.writeUTF(entry);
+        String ack = in.readUTF();
+        refreshMonitor("Server ACK: " + ack + " — Pending approval...");
+        String decision = in.readUTF();
+
+        if ("ACCEPTED".equals(decision)) {
+            refreshMonitor("FINAL STATUS: ACCEPTED\n\n" + entry);
+            JOptionPane.showMessageDialog(frame, "Request accepted.");
+        } else {
+            refreshMonitor("FINAL STATUS: REJECTED\n\n" + entry);
+            JOptionPane.showMessageDialog(frame, "Request rejected.");
+        }
+        } catch (ConnectException e) {
+            JOptionPane.showMessageDialog(frame, "Server not running. Start ServerMain first.");
+        } catch (IOException e) {
+            JOptionPane.showMessageDialog(frame, "Connection error: " + e.getMessage());
+        }
+    }
 }
