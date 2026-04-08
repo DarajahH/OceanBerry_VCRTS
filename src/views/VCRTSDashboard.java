@@ -628,7 +628,7 @@ public class VCRTSDashboard {
             String entry = String.format("[%s] ROLE:%s | ID:%s | INFO:%s | DURATION:%d | DEADLINE:%s",
                 dtf.format(arrivalTime), role, id, info, duration, formattedDeadline);
 
-            // Send this fucker to VC Controller server over socket
+            // Send this to the VC Controller server over socket
             refreshMonitor("Connecting to VC Controller server...");
 
             Socket socket = new Socket("localhost", 9806);
