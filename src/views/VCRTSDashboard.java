@@ -57,7 +57,7 @@ public class VCRTSDashboard {
         // Home panel is the default view, form panel is for submissions, and we can add more as needed
         leftCardContainer.add(createHomePanel(service), "HOME_SCREEN");
         leftCardContainer.add(createSubmissionPanel(), "FORM_SCREEN");
-        if (isAdminUser()) {
+        if (isAdminUser()) {//Only an admin may open this panel
             leftCardContainer.add(createAdminScreen(service), "ADMIN_SCREEN");
         }
         leftCardContainer.add(createTaskOwnerScreen(service), "TASK_OWNER_SCREEN");
@@ -98,7 +98,7 @@ public class VCRTSDashboard {
      * @param service
      * @return
      */
-    public JPanel createHomePanel(CloudDataService service) {
+    public JPanel createHomePanel(CloudDataService service) {//DH
 
         
         JPanel panel = new JPanel(new GridBagLayout());
@@ -159,7 +159,7 @@ public class VCRTSDashboard {
             panel.add(btnOpenForm, gbc);
         }
 
-        if (isOwnerUser()) {
+        if (isOwnerUser()) {//DH
             JButton taskOwnerBtn = new JButton("Task Owner Portal");
             taskOwnerBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
             taskOwnerBtn.addActionListener(e -> showScreen(createTaskOwnerScreen(service)));
@@ -174,7 +174,7 @@ public class VCRTSDashboard {
             panel.add(vehicleOwnerBtn, gbc);
         }
 
-        if (isAdminUser()) {
+        if (isAdminUser()) {//DH
             JButton btnAdminScreen = new JButton("Go to Admin Screen");
             btnAdminScreen.setFont(new Font("SansSerif", Font.BOLD, 14));
             btnAdminScreen.addActionListener(e -> showScreen(createAdminScreen(service)));
@@ -207,7 +207,7 @@ public class VCRTSDashboard {
         
     }
 
-    public JPanel createAdminScreen(CloudDataService service) {
+    public JPanel createAdminScreen(CloudDataService service) { //DH
         JPanel adminPanel = new JPanel(new GridBagLayout());
         adminPanel.setBackground(new Color(30, 30, 35));
         adminPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
@@ -383,7 +383,7 @@ public class VCRTSDashboard {
 
 //Show Screen method calls Panels - DH
 
-    private void showScreen(JPanel contentPanel) {
+    private void showScreen(JPanel contentPanel) {//DH
         frame.getContentPane().removeAll();
         frame.add(createHeader(), BorderLayout.NORTH);
         JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, contentPanel, createMonitorPanel());
@@ -395,7 +395,7 @@ public class VCRTSDashboard {
         frame.repaint();
     }
 
-    private JPanel createTaskOwnerScreen(CloudDataService service) {
+    private JPanel createTaskOwnerScreen(CloudDataService service) {//DH
         JPanel panel = new JPanel(new GridBagLayout());
         panel.setBackground(new Color(30, 30, 35));
         panel.setBorder(new EmptyBorder(20, 20, 20, 20));
@@ -444,7 +444,7 @@ public class VCRTSDashboard {
         gbc.gridx = 0;
         gbc.gridy = 5;
         gbc.gridwidth = 2;
-        JButton submitBtn = new JButton("Submit to VC");
+        JButton submitBtn = new JButton("Submit to VC"); //DH - Submit Button
         submitBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
         submitBtn.addActionListener(e -> {
             if (ownerIdField.getText().isBlank() || taskField.getText().isBlank() || vehicleField.getText().isBlank() || priorityField.getText().isBlank()) {
@@ -472,7 +472,7 @@ public class VCRTSDashboard {
         return panel;
     }
 
-    private JPanel createVehicleOwnerScreen(CloudDataService service) {
+    private JPanel createVehicleOwnerScreen(CloudDataService service) {//DH
         JPanel panel = new JPanel(new GridBagLayout());
         panel.setBackground(new Color(30, 30, 35));
         panel.setBorder(new EmptyBorder(20, 20, 20, 20));
@@ -549,7 +549,7 @@ public class VCRTSDashboard {
         return panel;
     }
 
-    private JButton createBackToHomeButton(CloudDataService service) {
+    private JButton createBackToHomeButton(CloudDataService service) {//DH
         JButton backBtn = new JButton("Back to Home");
         backBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
         backBtn.addActionListener(e -> showScreen(createHomePanel(service)));
@@ -736,6 +736,8 @@ public class VCRTSDashboard {
             JOptionPane.showMessageDialog(frame, "Error calculating completion times.");
         }
     }
+
+//User Validation Functions -DH
 
     private boolean isAdminUser() {
         return "ADMIN".equals(currentUserRole);

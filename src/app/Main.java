@@ -18,7 +18,8 @@ public final class Main {
         } catch (Exception ignored) {}
         
         // Launch the application
-        SwingUtilities.invokeLater(() -> new LoginScreen(service)); // Changed from createConsole to LoginScreen for better user experience and functionality. -DH
+        SwingUtilities.invokeLater(() -> new LoginScreen(service)); // Changed from createConsole to LoginScreen for better 
+                                                                    // user experience and functionality. -DH
     }
 }
 

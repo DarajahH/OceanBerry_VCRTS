@@ -45,6 +45,8 @@ public class LoginScreen {
       loginBtn.addActionListener(e -> {
             // USING INSTANCE METHOD
             if (service.validateUser(userField.getText(), new String(passField.getPassword()))) {
+
+                //DH -- Validates role for user-specific welcome message
                 String role = service.getCurrentUserRole();
                 String welcomeMessage;
                 switch (role) {

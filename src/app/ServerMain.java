@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 
-public class ServerMain {
+public class ServerMain {//Philip
 
     static ServerSocket serverSocket;
     static DataInputStream inputStream;
@@ -63,6 +63,7 @@ public class ServerMain {
             // Read the submission entry from client
             String entry = inputStream.readUTF();
             System.out.println("Request received from client: \"" + entry + "\"");
+
 
             // Step 1: Send acknowledge back to client
             outputStream.writeUTF("ACK");
