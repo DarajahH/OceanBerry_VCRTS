@@ -22,6 +22,7 @@ public class CloudDataService {
     private final Path jobPath;
     private final Path pendingRequestPath;
     private final Path adminDecisionPath;
+    private String currentUsername;
 
     public CloudDataService(Path logPath, Path userPath) {
         this(logPath, userPath, logPath.resolveSibling("jobs.txt"));
@@ -52,9 +53,10 @@ public class CloudDataService {
         return Files.readAllLines(logPath, StandardCharsets.UTF_8);
     }
 
-    public void registerUser(String username, String password) throws IOException {
+    public void registerUser(String username, String password, String role) throws IOException {
         String cleanUsername = username == null ? "" : username.trim();
         String cleanPassword = password == null ? "" : password.trim();
+        String cleanRole = role == null ? "CLIENT" : role.trim().toUpperCase();
 
         if (cleanUsername.isEmpty() || cleanPassword.isEmpty()) {
             throw new IllegalArgumentException("Username and password are required.");
@@ -64,7 +66,11 @@ public class CloudDataService {
             throw new IllegalArgumentException("Username already exists.");
         }
 
-        String entry = cleanUsername + ":" + cleanPassword + System.lineSeparator();
+        if (!cleanRole.equals("CLIENT") && !cleanRole.equals("OWNER") && !cleanRole.equals("ADMIN")) {
+            cleanRole = "CLIENT";
+        }
+
+        String entry = cleanUsername + ":" + cleanPassword + ":" + cleanRole + System.lineSeparator();
         Files.writeString(
             userPath,
             entry,
@@ -88,7 +94,9 @@ public class CloudDataService {
             }
             List<String> users = Files.readAllLines(userPath, StandardCharsets.UTF_8);
             for (String line : users) {
-                if (line.equals(cleanUsername + ":" + cleanPassword)) {
+                String[] parts = line.split(":", 3);
+                if (parts.length >= 2 && parts[0].equals(cleanUsername) && parts[1].equals(cleanPassword)) {
+                    currentUsername = cleanUsername;
                     return true;
                 }
             }
@@ -109,7 +117,8 @@ public class CloudDataService {
             }
             List<String> users = Files.readAllLines(userPath, StandardCharsets.UTF_8);
             for (String line : users) {
-                if (line.startsWith(cleanUsername + ":")) {
+                String[] parts = line.split(":", 3);
+                if (parts.length >= 1 && parts[0].equals(cleanUsername)) {
                     return true;
                 }
             }
@@ -117,6 +126,41 @@ public class CloudDataService {
             e.printStackTrace();
         }
         return false;
+    }
+
+    public String getCurrentUsername() {
+        return currentUsername;
+    }
+
+    public String getCurrentUserRole() {
+        return currentUsername == null ? "CLIENT" : getUserRole(currentUsername);
+    }
+
+    public String getUserRole(String username) {
+        String cleanUsername = username == null ? "" : username.trim();
+        if (cleanUsername.isEmpty()) {
+            return "CLIENT";
+        }
+
+        try {
+            if (!Files.exists(userPath)) {
+                return "CLIENT";
+            }
+            List<String> users = Files.readAllLines(userPath, StandardCharsets.UTF_8);
+            for (String line : users) {
+                String[] parts = line.split(":", 3);
+                if (parts.length >= 2 && parts[0].equals(cleanUsername)) {
+                    if (parts.length == 3 && !parts[2].isBlank()) {
+                        return parts[2].trim().toUpperCase();
+                    }
+                    return cleanUsername.equalsIgnoreCase("admin") ? "ADMIN" : "CLIENT";
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return cleanUsername.equalsIgnoreCase("admin") ? "ADMIN" : "CLIENT";
     }
 
     public void appendJob(Job job) throws IOException {

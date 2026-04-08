@@ -20,6 +20,7 @@ public class VCRTSDashboard {
     private final JFrame frame;
     private final CloudDataService service;
     private final VCController controller;
+    private final String currentUserRole;
     private final DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss");
 
     private final CardLayout cardLayout;
@@ -34,9 +35,10 @@ public class VCRTSDashboard {
     private JLabel adminRequestStatusLabel;
     private Timer adminRefreshTimer;
 
-    public VCRTSDashboard(CloudDataService service) {
+    public VCRTSDashboard(CloudDataService service, String currentUserRole) {
        this.service = service;
         this.controller = new VCController(service);
+        this.currentUserRole = currentUserRole == null ? "CLIENT" : currentUserRole.toUpperCase();
 
         // 1. Setup Main Frame
         frame = new JFrame("VCRTS - Cloud Control Center");
@@ -55,7 +57,9 @@ public class VCRTSDashboard {
         // Home panel is the default view, form panel is for submissions, and we can add more as needed
         leftCardContainer.add(createHomePanel(service), "HOME_SCREEN");
         leftCardContainer.add(createSubmissionPanel(), "FORM_SCREEN");
-        leftCardContainer.add(createAdminScreen(service), "ADMIN_SCREEN");
+        if (isAdminUser()) {
+            leftCardContainer.add(createAdminScreen(service), "ADMIN_SCREEN");
+        }
         leftCardContainer.add(createTaskOwnerScreen(service), "TASK_OWNER_SCREEN");
         leftCardContainer.add(createVehicleOwnerScreen(service), "VEHICLE_OWNER_SCREEN");
         leftCardContainer.setBackground(new Color(30, 30, 35));
@@ -124,24 +128,6 @@ public class VCRTSDashboard {
 
         // Submission Button now brings users to the form screen instead of directly moving into submission Panel.
 
-        JButton btnOpenForm = new JButton("Submit New Transaction");
-        btnOpenForm.setFont(new Font("SansSerif", Font.BOLD, 14));
-        btnOpenForm.addActionListener(e -> {
-            frame.getContentPane().removeAll();
-            frame.add(createHeader(), BorderLayout.NORTH);
-            JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, createSubmissionPanel(), createMonitorPanel());
-            splitPane.setDividerLocation(400);
-            splitPane.setDividerSize(2);
-            splitPane.setBorder(null);
-            frame.add(splitPane, BorderLayout.CENTER);
-            frame.revalidate();
-            frame.repaint();
-        });
-
-        gbc.gridy = 2;
-        gbc.weighty = 0.2;
-        gbc.insets = new Insets(20, 0, 10, 0);
-        panel.add(btnOpenForm, gbc); 
 /* Calculate Completion Times Button was left in for User efficiency 
  This will trigger the logic to calculate and display completion times based on existing job records. -DH
 */
@@ -153,25 +139,48 @@ public class VCRTSDashboard {
         gbc.insets = new Insets(10, 0, 20, 0); 
         gbc.gridy = 3; panel.add(btnCalcTimes, gbc);
 
+        int nextRow = 4;
+        if (isClientUser()) {
+            JButton btnOpenForm = new JButton("Submit New Transaction");
+            btnOpenForm.setFont(new Font("SansSerif", Font.BOLD, 14));
+            btnOpenForm.addActionListener(e -> {
+                frame.getContentPane().removeAll();
+                frame.add(createHeader(), BorderLayout.NORTH);
+                JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, createSubmissionPanel(), createMonitorPanel());
+                splitPane.setDividerLocation(400);
+                splitPane.setDividerSize(2);
+                splitPane.setBorder(null);
+                frame.add(splitPane, BorderLayout.CENTER);
+                frame.revalidate();
+                frame.repaint();
+            });
+            gbc.gridy = nextRow++;
+            gbc.insets = new Insets(20, 0, 10, 0);
+            panel.add(btnOpenForm, gbc);
+        }
 
-        JButton taskOwnerBtn = new JButton("Task Owner Portal");
-        taskOwnerBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
-        taskOwnerBtn.addActionListener(e -> showScreen(createTaskOwnerScreen(service)));
-        gbc.gridy = 4;
-        gbc.insets = new Insets(10, 0, 10, 0);
-        panel.add(taskOwnerBtn, gbc);
+        if (isOwnerUser()) {
+            JButton taskOwnerBtn = new JButton("Task Owner Portal");
+            taskOwnerBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
+            taskOwnerBtn.addActionListener(e -> showScreen(createTaskOwnerScreen(service)));
+            gbc.gridy = nextRow++;
+            gbc.insets = new Insets(10, 0, 10, 0);
+            panel.add(taskOwnerBtn, gbc);
 
-        JButton vehicleOwnerBtn = new JButton("Vehicle Owner Portal");
-        vehicleOwnerBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
-        vehicleOwnerBtn.addActionListener(e -> showScreen(createVehicleOwnerScreen(service)));
-        gbc.gridy = 5;
-        panel.add(vehicleOwnerBtn, gbc);
+            JButton vehicleOwnerBtn = new JButton("Vehicle Owner Portal");
+            vehicleOwnerBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
+            vehicleOwnerBtn.addActionListener(e -> showScreen(createVehicleOwnerScreen(service)));
+            gbc.gridy = nextRow++;
+            panel.add(vehicleOwnerBtn, gbc);
+        }
 
-        JButton btnAdminScreen = new JButton("Go to Admin Screen");
-        btnAdminScreen.setFont(new Font("SansSerif", Font.BOLD, 14));
-        btnAdminScreen.addActionListener(e -> showScreen(createAdminScreen(service)));
-        gbc.gridy = 6;
-        panel.add(btnAdminScreen, gbc);
+        if (isAdminUser()) {
+            JButton btnAdminScreen = new JButton("Go to Admin Screen");
+            btnAdminScreen.setFont(new Font("SansSerif", Font.BOLD, 14));
+            btnAdminScreen.addActionListener(e -> showScreen(createAdminScreen(service)));
+            gbc.gridy = nextRow++;
+            panel.add(btnAdminScreen, gbc);
+        }
 
         /*JTextArea introMessage = new JTextArea(
             "VCRTS lets users submit jobs, store job data in files, and calculate FIFO completion times.\n\n" +
@@ -310,7 +319,8 @@ public class VCRTSDashboard {
         gbc.gridx = 0; gbc.gridy = 0;
         panel.add(createWhiteLabel("Select Role:"), gbc);
 
-        roleBox = new JComboBox<>(new String[]{"OWNER", "CLIENT", "ADMIN"});
+        roleBox = new JComboBox<>(new String[]{"CLIENT"});
+        roleBox.setEnabled(false);
         roleBox.addActionListener(e -> adjustFields());
         gbc.gridx = 1; 
         panel.add(roleBox, gbc);
@@ -725,6 +735,18 @@ public class VCRTSDashboard {
         } catch (Exception e) {
             JOptionPane.showMessageDialog(frame, "Error calculating completion times.");
         }
+    }
+
+    private boolean isAdminUser() {
+        return "ADMIN".equals(currentUserRole);
+    }
+
+    private boolean isOwnerUser() {
+        return "OWNER".equals(currentUserRole);
+    }
+
+    private boolean isClientUser() {
+        return "CLIENT".equals(currentUserRole);
     }
 
     private void refreshMonitor(String resultSection) {
