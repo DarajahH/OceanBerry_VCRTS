@@ -9,13 +9,10 @@ import javax.swing.JOptionPane;
 import javax.swing.JPasswordField;
 import javax.swing.JTextField;
 import services.CloudDataService;
-import services.RequestClientService;
-import services.VCController;
+
 public class LoginScreen {
 
     private final CloudDataService service;
-    private final RequestClientService requestClientService;
-    private final VCController controller;
     private final JFrame frame;
 
     public LoginScreen(CloudDataService service) {

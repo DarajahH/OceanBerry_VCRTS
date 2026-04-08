@@ -3,18 +3,11 @@ package app;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import services.CloudDataService;
-import services.RequestClientService;
-import services.VCController;
 import views.LoginScreen;
 
 
 
 public final class Main {
-
-    private Main() {
-        // Prevent instantiation of the Main class
-        throw new UnsuporttedOperationException("Main class cannot be instantiated");
-    }
     public static void main(String[] args) {
         // Configure the look and feel - Evans Cortez
         configureLookAndFeel();
@@ -25,15 +18,16 @@ public final class Main {
             java.nio.file.Paths.get("users.txt")
         );
         
-        RequestClientService requestService = new RequestClientService();
-        VCController controller = new VCController(dataService, requestService);
-        
-        try {
-            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-        } catch (Exception ignored) {}
-        
         // Launch the application
         SwingUtilities.invokeLater(() -> new LoginScreen(service)); // Changed from createConsole to LoginScreen for better user experience and functionality. -DH
+    }
+
+    private static void configureLookAndFeel() {
+        try {
+            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+        } catch (Exception e) {
+            System.err.println("Failed to set look and feel: " + e.getMessage());
+        }
     }
 }
 
