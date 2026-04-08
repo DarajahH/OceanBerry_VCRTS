@@ -46,7 +46,9 @@ public class LoginScreen {
                 new VCRTSDashboard(service); // Changed from createConsole to VCRTSDashboard for better user experience and functionality. -DH
             } else {
                 JOptionPane.showMessageDialog(frame, "Invalid Credentials");
-            }
+            };
+
+
         });
 
         regBtn.addActionListener(e -> {
@@ -66,7 +68,9 @@ public class LoginScreen {
                 JOptionPane.showMessageDialog(frame, ex.getMessage());
             } catch (Exception ex) { 
                 JOptionPane.showMessageDialog(frame, "Error saving user."); 
-            }
+            };
+
+            
         });
 
         // Center the frame on screen
