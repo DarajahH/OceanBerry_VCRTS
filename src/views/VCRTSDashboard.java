@@ -436,7 +436,7 @@ public class VCRTSDashboard {
 
         gbc.gridx = 0;
         gbc.gridy = 4;
-        panel.add(createWhiteLabel("Priority Level:"), gbc);
+        panel.add(createWhiteLabel("Priority Level (1-5):"), gbc);
         JTextField priorityField = new JTextField();
         gbc.gridx = 1;
         panel.add(priorityField, gbc);
@@ -451,12 +451,24 @@ public class VCRTSDashboard {
                 JOptionPane.showMessageDialog(frame, "Please complete all Task Owner fields.");
                 return;
             }
+            String priorityText = priorityField.getText().trim();
+            int priority;
+            try {
+                priority = Integer.parseInt(priorityText);
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(frame, "Priority must be a number between 1 and 5.");
+                return;
+            }
+            if (priority < 1 || priority > 5) {
+                JOptionPane.showMessageDialog(frame, "Priority must be between 1 and 5.");
+                return;
+            }
             String entry = String.format("[%s] ROLE:TASK_OWNER | ID:%s | TASK:%s | VEHICLE:%s | PRIORITY:%s",
                 dtf.format(LocalDateTime.now()),
                 ownerIdField.getText().trim(),
                 taskField.getText().trim(),
                 vehicleField.getText().trim(),
-                priorityField.getText().trim());
+                priority);
             try {
                 service.appendLog(entry);
                 refreshMonitor("Task Owner submitted to VC:\n" + entry);
