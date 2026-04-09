@@ -412,40 +412,21 @@ public class VCRTSDashboard {
 
         gbc.gridx = 0;
         gbc.gridy = 4;
-        panel.add(createWhiteLabel("Priority Level (1-5):"), gbc);
-        JTextField priorityField = new JTextField();
-        gbc.gridx = 1;
-        panel.add(priorityField, gbc);
-
-        gbc.gridx = 0;
-        gbc.gridy = 5;
         panel.add(createWhiteLabel("Deadline (YYYY/MM/DD HH:MM:SS):"), gbc);
         JTextField taskDeadlineField = new JTextField();
         gbc.gridx = 1;
         panel.add(taskDeadlineField, gbc);
 
         gbc.gridx = 0;
-        gbc.gridy = 6;
+        gbc.gridy = 5;
         gbc.gridwidth = 2;
         JButton submitBtn = new JButton("Submit to VC");
         submitBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
         submitBtn.addActionListener(e -> {
             if (ownerIdField.getText().isBlank() || taskField.getText().isBlank()
-                    || vehicleField.getText().isBlank() || priorityField.getText().isBlank()
+                    || vehicleField.getText().isBlank()
                     || taskDeadlineField.getText().isBlank()) {
                 JOptionPane.showMessageDialog(frame, "Please complete all Task Owner fields.");
-                return;
-            }
-            String priorityText = priorityField.getText().trim();
-            int priority;
-            try {
-                priority = Integer.parseInt(priorityText);
-            } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(frame, "Priority must be a number between 1 and 5.");
-                return;
-            }
-            if (priority < 1 || priority > 5) {
-                JOptionPane.showMessageDialog(frame, "Priority must be between 1 and 5.");
                 return;
             }
             String deadlineText = taskDeadlineField.getText().trim();
@@ -455,12 +436,11 @@ public class VCRTSDashboard {
                 JOptionPane.showMessageDialog(frame, "Deadline must use format YYYY/MM/DD HH:MM:SS.");
                 return;
             }
-            String entry = String.format("[%s] ROLE:TASK_OWNER | ID:%s | TASK:%s | VEHICLE:%s | PRIORITY:%s | DEADLINE:%s",
+            String entry = String.format("[%s] ROLE:TASK_OWNER | ID:%s | TASK:%s | VEHICLE:%s | DEADLINE:%s",
                 dtf.format(LocalDateTime.now()),
                 ownerIdField.getText().trim(),
                 taskField.getText().trim(),
                 vehicleField.getText().trim(),
-                priority,
                 deadlineText);
             try {
                 service.appendLog(entry);
