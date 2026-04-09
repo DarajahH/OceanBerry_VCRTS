@@ -19,6 +19,37 @@ public class Client extends User {
     private String deadline;
     private LocalDateTime timestamp;
 
+    public Client(String id, String info, String duration, String deadline) {
+        this.id = id;
+        this.info = info;
+        this.duration = duration;
+        this.deadline = deadline;
+        this.timestamp = LocalDateTime.now();
+    }
+
+    public String getRole() {
+        return role;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getInfo() {
+        return info;
+    }
+
+    public String getDuration() {
+        return duration;
+    }
+
+    public String getDeadline() {
+        return deadline;
+    }
+
+    public LocalDateTime getTimestamp() {
+        return timestamp;
+    }
 
     @Override
     public String toString() {

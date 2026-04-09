@@ -1,3 +1,5 @@
+
+/*
 package models.enums;
 
 public enum JobRedundancyLevel {
@@ -15,3 +17,4 @@ public enum JobRedundancyLevel {
         return this.desc;
     }
 }
+*/

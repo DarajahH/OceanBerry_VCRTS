@@ -2,10 +2,12 @@ package views;
 
 import java.awt.*;
 import java.awt.event.KeyEvent;
-import java.io.IOException;
+import java.io.*;
+import java.net.Socket;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import services.CloudDataService;
@@ -18,6 +20,7 @@ public class VCRTSDashboard {
     private final JFrame frame;
     private final CloudDataService service;
     private final VCController controller;
+    private final String currentUserRole;
     private final DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss");
 
     private final CardLayout cardLayout;
@@ -28,10 +31,14 @@ public class VCRTSDashboard {
     private JTextField idField, infoField, durField, deadlineField;
     private JLabel idLabel, infoLabel, durLabel, deadlineLabel;
     private JTextArea monitorArea;
+    private JTextArea adminRequestArea;
+    private JLabel adminRequestStatusLabel;
+    private Timer adminRefreshTimer;
 
-    public VCRTSDashboard(CloudDataService service) {
+    public VCRTSDashboard(CloudDataService service, String currentUserRole) {
        this.service = service;
         this.controller = new VCController(service);
+        this.currentUserRole = currentUserRole == null ? "CLIENT" : currentUserRole.toUpperCase();
 
         // 1. Setup Main Frame
         frame = new JFrame("VCRTS - Cloud Control Center");
@@ -50,7 +57,9 @@ public class VCRTSDashboard {
         // Home panel is the default view, form panel is for submissions, and we can add more as needed
         leftCardContainer.add(createHomePanel(service), "HOME_SCREEN");
         leftCardContainer.add(createSubmissionPanel(), "FORM_SCREEN");
-        leftCardContainer.add(createAdminScreen(service), "AdminScreen");
+        if (isAdminUser()) {//Only an admin may open this panel
+            leftCardContainer.add(createAdminScreen(service), "ADMIN_SCREEN");
+        }
         leftCardContainer.add(createTaskOwnerScreen(service), "TASK_OWNER_SCREEN");
         leftCardContainer.add(createVehicleOwnerScreen(service), "VEHICLE_OWNER_SCREEN");
         leftCardContainer.setBackground(new Color(30, 30, 35));
@@ -89,7 +98,7 @@ public class VCRTSDashboard {
      * @param service
      * @return
      */
-    public JPanel createHomePanel(CloudDataService service) {
+    public JPanel createHomePanel(CloudDataService service) {//DH
 
         
         JPanel panel = new JPanel(new GridBagLayout());
@@ -119,24 +128,6 @@ public class VCRTSDashboard {
 
         // Submission Button now brings users to the form screen instead of directly moving into submission Panel.
 
-        JButton btnOpenForm = new JButton("Submit New Transaction");
-        btnOpenForm.setFont(new Font("SansSerif", Font.BOLD, 14));
-        btnOpenForm.addActionListener(e -> {
-            frame.getContentPane().removeAll();
-            frame.add(createHeader(), BorderLayout.NORTH);
-            JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, createSubmissionPanel(), createMonitorPanel());
-            splitPane.setDividerLocation(400);
-            splitPane.setDividerSize(2);
-            splitPane.setBorder(null);
-            frame.add(splitPane, BorderLayout.CENTER);
-            frame.revalidate();
-            frame.repaint();
-        });
-
-        gbc.gridy = 2;
-        gbc.weighty = 0.5;
-        gbc.insets = new Insets(20, 0, 10, 0);
-        panel.add(btnOpenForm, gbc); 
 /* Calculate Completion Times Button was left in for User efficiency 
  This will trigger the logic to calculate and display completion times based on existing job records. -DH
 */
@@ -148,32 +139,146 @@ public class VCRTSDashboard {
         gbc.insets = new Insets(10, 0, 20, 0); 
         gbc.gridy = 3; panel.add(btnCalcTimes, gbc);
 
+        int nextRow = 4;
+        if (isClientUser()) {
+            JButton btnOpenForm = new JButton("Submit New Transaction");
+            btnOpenForm.setFont(new Font("SansSerif", Font.BOLD, 14));
+            btnOpenForm.addActionListener(e -> {
+                frame.getContentPane().removeAll();
+                frame.add(createHeader(), BorderLayout.NORTH);
+                JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, createSubmissionPanel(), createMonitorPanel());
+                splitPane.setDividerLocation(400);
+                splitPane.setDividerSize(2);
+                splitPane.setBorder(null);
+                frame.add(splitPane, BorderLayout.CENTER);
+                frame.revalidate();
+                frame.repaint();
+            });
+            gbc.gridy = nextRow++;
+            gbc.insets = new Insets(20, 0, 10, 0);
+            panel.add(btnOpenForm, gbc);
+        }
 
-        JButton taskOwnerBtn = new JButton("Task Owner Portal");
-        taskOwnerBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
-        taskOwnerBtn.addActionListener(e -> showScreen(createTaskOwnerScreen(service)));
-        gbc.gridy = 4;
-        gbc.insets = new Insets(10, 0, 10, 0);
-        panel.add(taskOwnerBtn, gbc);
+        if (isOwnerUser()) {//DH
+            JButton taskOwnerBtn = new JButton("Task Owner Portal");
+            taskOwnerBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
+            taskOwnerBtn.addActionListener(e -> showScreen(createTaskOwnerScreen(service)));
+            gbc.gridy = nextRow++;
+            gbc.insets = new Insets(10, 0, 10, 0);
+            panel.add(taskOwnerBtn, gbc);
 
-        JButton vehicleOwnerBtn = new JButton("Vehicle Owner Portal");
-        vehicleOwnerBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
-        vehicleOwnerBtn.addActionListener(e -> showScreen(createVehicleOwnerScreen(service)));
-        gbc.gridy = 5;
-        panel.add(vehicleOwnerBtn, gbc);
+            JButton vehicleOwnerBtn = new JButton("Vehicle Owner Portal");
+            vehicleOwnerBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
+            vehicleOwnerBtn.addActionListener(e -> showScreen(createVehicleOwnerScreen(service)));
+            gbc.gridy = nextRow++;
+            panel.add(vehicleOwnerBtn, gbc);
+        }
 
-        JButton btnAdminScreen = new JButton("Go to Admin Screen");
-        btnAdminScreen.setFont(new Font("SansSerif", Font.BOLD, 14));
-        btnAdminScreen.addActionListener(e -> showScreen(createAdminScreen(service)));
-        gbc.gridy = 6;
-        panel.add(btnAdminScreen, gbc);
+        if (isAdminUser()) {//DH
+            JButton btnAdminScreen = new JButton("Go to Admin Screen");
+            btnAdminScreen.setFont(new Font("SansSerif", Font.BOLD, 14));
+            btnAdminScreen.addActionListener(e -> showScreen(createAdminScreen(service)));
+            gbc.gridy = nextRow++;
+            panel.add(btnAdminScreen, gbc);
+        }
 
+        /*JTextArea introMessage = new JTextArea(
+            "VCRTS lets users submit jobs, store job data in files, and calculate FIFO completion times.\n\n" +
+            "How to proceed:\n" +
+            "1. Click \"Submit New Transaction\"\n" +
+            "2. Enter Job ID, description, duration, and deadline\n" +
+            "3. Submit the entry\n" +
+            "4. Click \"Calculate Completion Times\" to view results"
+        );
+        introMessage.setEditable(false);
+        introMessage.setLineWrap(true);
+        introMessage.setWrapStyleWord(true);
+        introMessage.setOpaque(false);
+        introMessage.setForeground(Color.LIGHT_GRAY);
+        introMessage.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        introMessage.setBorder(null);
+
+        gbc.gridy = 7;
+        gbc.weighty = 0.3;
+        gbc.insets = new Insets(20, 20, 20, 20);
+        panel.add(introMessage, gbc);
+*/
         return panel;
         
     }
 
+    public JPanel createAdminScreen(CloudDataService service) { //DH
+        JPanel adminPanel = new JPanel(new GridBagLayout());
+        adminPanel.setBackground(new Color(30, 30, 35));
+        adminPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.gridwidth = 2;
+        gbc.anchor = GridBagConstraints.CENTER;
+        gbc.insets = new Insets(10, 10, 10, 10);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.weightx = 1.0;
 
+        JLabel titleLabel = new JLabel("Admin Screen");
+        titleLabel.setForeground(Color.black);
+        titleLabel.setFont(new Font("SansSerif", Font.BOLD, 24));
+        titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        adminPanel.add(titleLabel, gbc);
+
+        gbc.gridy = 1;
+        adminRequestStatusLabel = new JLabel("Waiting for client request...");
+        adminRequestStatusLabel.setForeground(Color.WHITE);
+        adminRequestStatusLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        adminPanel.add(adminRequestStatusLabel, gbc);
+
+        gbc.gridy = 2;
+        adminRequestArea = new JTextArea(8, 24);
+        adminRequestArea.setEditable(false);
+        adminRequestArea.setLineWrap(true);
+        adminRequestArea.setWrapStyleWord(true);
+        adminRequestArea.setBackground(Color.BLACK);
+        adminRequestArea.setForeground(Color.GREEN);
+        adminRequestArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
+        JScrollPane pendingScrollPane = new JScrollPane(adminRequestArea);
+        adminPanel.add(pendingScrollPane, gbc);
+
+        gbc.gridy = 3;
+        gbc.gridwidth = 2;
+        JButton btnCalcTimes = new JButton("Calculate Completion Times");
+        btnCalcTimes.setFont(new Font("SansSerif", Font.BOLD, 14));
+        btnCalcTimes.setBackground(new Color(70, 130, 180));
+        btnCalcTimes.setForeground(Color.RED);
+        btnCalcTimes.addActionListener(e -> calculateCompletionTimes());
+        adminPanel.add(btnCalcTimes, gbc);
+
+        gbc.gridy = 4;
+        JButton acceptBtn = new JButton("Accept Job");
+        acceptBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
+        acceptBtn.addActionListener(e -> submitAdminDecision("ACCEPTED"));
+        adminPanel.add(acceptBtn, gbc);
+
+        gbc.gridy = 5;
+        JButton rejectBtn = new JButton("Reject Job");
+        rejectBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
+        rejectBtn.addActionListener(e -> submitAdminDecision("REJECTED"));
+        adminPanel.add(rejectBtn, gbc);
+
+        gbc.gridy = 6;
+        JButton backBtn = new JButton("Back to Home");
+        backBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
+        backBtn.addActionListener(e -> {
+            stopAdminRefreshTimer();
+            showScreen(createHomePanel(service));
+        });
+        adminPanel.add(backBtn, gbc);
+
+        startAdminRefreshTimer();
+        refreshPendingAdminRequest();
+
+        return adminPanel;
+    }
 
 
     private JPanel createHeader() {
@@ -185,6 +290,13 @@ public class VCRTSDashboard {
         title.setForeground(Color.CYAN);
         title.setFont(new Font("SansSerif", Font.BOLD, 18));
         header.add(title, BorderLayout.WEST);
+
+        JButton logoutBtn = new JButton("Logout");
+        logoutBtn.addActionListener(e -> {
+            frame.dispose();
+            new LoginScreen(service);
+        });
+        header.add(logoutBtn, BorderLayout.EAST);
 
         return header;
     }
@@ -206,7 +318,9 @@ public class VCRTSDashboard {
         // Role Selection
         gbc.gridx = 0; gbc.gridy = 0;
         panel.add(createWhiteLabel("Select Role:"), gbc);
-        roleBox = new JComboBox<>(new String[]{"CLIENT", "ADMIN"});
+
+        roleBox = new JComboBox<>(new String[]{"CLIENT"});
+        roleBox.setEnabled(false);
         roleBox.addActionListener(e -> adjustFields());
         gbc.gridx = 1; 
         panel.add(roleBox, gbc);
@@ -269,7 +383,7 @@ public class VCRTSDashboard {
 
 //Show Screen method calls Panels - DH
 
-    private void showScreen(JPanel contentPanel) {
+    private void showScreen(JPanel contentPanel) {//DH
         frame.getContentPane().removeAll();
         frame.add(createHeader(), BorderLayout.NORTH);
         JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, contentPanel, createMonitorPanel());
@@ -281,7 +395,7 @@ public class VCRTSDashboard {
         frame.repaint();
     }
 
-    private JPanel createTaskOwnerScreen(CloudDataService service) {
+    private JPanel createTaskOwnerScreen(CloudDataService service) {//DH
         JPanel panel = new JPanel(new GridBagLayout());
         panel.setBackground(new Color(30, 30, 35));
         panel.setBorder(new EmptyBorder(20, 20, 20, 20));
@@ -330,7 +444,7 @@ public class VCRTSDashboard {
         gbc.gridx = 0;
         gbc.gridy = 5;
         gbc.gridwidth = 2;
-        JButton submitBtn = new JButton("Submit to VC");
+        JButton submitBtn = new JButton("Submit to VC"); //DH - Submit Button
         submitBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
         submitBtn.addActionListener(e -> {
             if (ownerIdField.getText().isBlank() || taskField.getText().isBlank() || vehicleField.getText().isBlank() || priorityField.getText().isBlank()) {
@@ -358,7 +472,7 @@ public class VCRTSDashboard {
         return panel;
     }
 
-    private JPanel createVehicleOwnerScreen(CloudDataService service) {
+    private JPanel createVehicleOwnerScreen(CloudDataService service) {//DH
         JPanel panel = new JPanel(new GridBagLayout());
         panel.setBackground(new Color(30, 30, 35));
         panel.setBorder(new EmptyBorder(20, 20, 20, 20));
@@ -435,7 +549,7 @@ public class VCRTSDashboard {
         return panel;
     }
 
-    private JButton createBackToHomeButton(CloudDataService service) {
+    private JButton createBackToHomeButton(CloudDataService service) {//DH
         JButton backBtn = new JButton("Back to Home");
         backBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
         backBtn.addActionListener(e -> showScreen(createHomePanel(service)));
@@ -491,6 +605,32 @@ public class VCRTSDashboard {
         frame.revalidate(); // Refreshes the UI so hidden fields don't leave weird spaces
     }
 
+    private boolean requestApproval(String entry) {
+        //: Step 1: ACK (Acknowledgment)
+        JOptionPane.showMessageDialog(
+            frame,
+            "ACK: Request received by VC contoller. \n\nPending approval.",
+            "Resquest Acknowledged",
+            JOptionPane.INFORMATION_MESSAGE
+        );
+
+        //Step 2: VC Controller decision 
+        String[] options = {"Accept", "Reject"};
+
+        int decision = JOptionPane.showOptionDialog(
+            frame,
+            "VC Controller Review:\n\n" + entry + "\n\nAccept or Reject this request?",
+            "VC Controller Decision",
+            JOptionPane.DEFAULT_OPTION,
+            JOptionPane.QUESTION_MESSAGE,
+            null,
+            options,
+            options[0]
+        );
+
+        return decision == 0; // Accept = true
+    }
+
     private void saveEntry() {
         String role = (String) roleBox.getSelectedItem();
         if ("ADMIN".equals(role)) {
@@ -498,13 +638,28 @@ public class VCRTSDashboard {
             return;
         }
 
+        //Form input collected cleanly- TC
         String id = idField.getText().trim();
         String info = infoField.getText().trim();
         String dur = durField.getText().trim();
         String deadline = deadlineField.isVisible() ? deadlineField.getText().trim() : "N/A";
+        int duration;
+
 
         if (id.isEmpty() || info.isEmpty() || dur.isEmpty()) {
             JOptionPane.showMessageDialog(frame, "Please enter all required fields.");
+            return;
+        }
+
+        if (!id.matches("\\d+")) {
+            JOptionPane.showMessageDialog(frame, "ID must be numeric (digits only).");
+            return;
+        }
+
+        try {
+            duration = Integer.parseInt(dur);
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(frame, "Duration must be a number.");
             return;
         }
 
@@ -513,15 +668,53 @@ public class VCRTSDashboard {
             return;
         }
 
-        String entry = String.format("[%s] ROLE:%s | ID:%s | INFO:%s | DURATION:%s | DEADLINE:%s",
-            dtf.format(LocalDateTime.now()), role, id, info, dur, deadline);
-
         try {
-            service.appendLog(entry);
-            refreshMonitor("Saved entry:\n" + entry);
-            clear();
+            LocalDateTime arrivalTime = LocalDateTime.now();
+            LocalDateTime deadlineTime = deadlineField.isVisible()
+                ? LocalDateTime.parse(deadline, dtf)
+                : null;
+            String formattedDeadline = deadlineTime == null ? "N/A" : dtf.format(deadlineTime);
+            String entry = String.format("[%s] ROLE:%s | ID:%s | INFO:%s | DURATION:%d | DEADLINE:%s",
+                dtf.format(arrivalTime), role, id, info, duration, formattedDeadline);
+
+            // Send this fucker to VC Controller server over socket
+            refreshMonitor("Connecting to VC Controller server...");
+
+            Socket socket = new Socket("localhost", 9806);
+            DataOutputStream outputStream = new DataOutputStream(socket.getOutputStream());
+            DataInputStream inputStream = new DataInputStream(socket.getInputStream());
+
+            // Client sends the entry to server
+            outputStream.writeUTF(entry);
+
+            // Client should read acknowledge from server
+            String ack = inputStream.readUTF();
+            refreshMonitor("Server response: " + ack + " - Pending approval...");
+
+            // Client reads the final decision from server(accept or nah)
+            String decision = inputStream.readUTF();
+
+            if ("ACCEPTED".equals(decision)) {
+                refreshMonitor("FINAL STATUS: ACCEPTED\n\nSaved entry:\n" + entry);
+                clear();
+            } else {
+                refreshMonitor("FINAL STATUS: REJECTED\n\nRejected entry:\n" + entry);
+                JOptionPane.showMessageDialog(frame, "Request rejected by VC Controller. Nothing was saved.");
+            }
+
+            // Connection close
+            inputStream.close();
+            outputStream.close();
+            socket.close();
+
+        } catch (java.time.format.DateTimeParseException e) {
+            JOptionPane.showMessageDialog(frame, "Deadline must use format yyyy/MM/dd HH:mm:ss.");
+        } catch (java.net.ConnectException e) {
+            JOptionPane.showMessageDialog(frame, "Cannot connect to VC Controller server.\nMake sure the server is running first.");
+        } catch (IllegalArgumentException e) {
+            JOptionPane.showMessageDialog(frame, e.getMessage());
         } catch (IOException e) {
-            JOptionPane.showMessageDialog(frame, "File Error");
+            JOptionPane.showMessageDialog(frame, "Connection error: " + e.getMessage());
         }
     }
 
@@ -544,6 +737,20 @@ public class VCRTSDashboard {
         }
     }
 
+//User Validation Functions -DH
+
+    private boolean isAdminUser() {
+        return "ADMIN".equals(currentUserRole);
+    }
+
+    private boolean isOwnerUser() {
+        return "OWNER".equals(currentUserRole);
+    }
+
+    private boolean isClientUser() {
+        return "CLIENT".equals(currentUserRole);
+    }
+
     private void refreshMonitor(String resultSection) {
         try {
             StringBuilder display = new StringBuilder();
@@ -560,58 +767,65 @@ public class VCRTSDashboard {
         } catch (IOException ignored) {}
     }
 
+    private void startAdminRefreshTimer() {
+        stopAdminRefreshTimer();
+        adminRefreshTimer = new Timer(1000, e -> refreshPendingAdminRequest());
+        adminRefreshTimer.start();
+    }
+
+    private void stopAdminRefreshTimer() {
+        if (adminRefreshTimer != null) {
+            adminRefreshTimer.stop();
+            adminRefreshTimer = null;
+        }
+    }
+
+    private void refreshPendingAdminRequest() {
+        if (adminRequestArea == null || adminRequestStatusLabel == null) {
+            return;
+        }
+
+        try {
+            Map<String, String> pendingRequest = service.readPendingRequest();
+            String entry = pendingRequest.get("ENTRY");
+
+            if (entry == null || entry.isBlank()) {
+                adminRequestStatusLabel.setText("Waiting for client request...");
+                adminRequestArea.setText("No pending client request.");
+                return;
+            }
+
+            adminRequestStatusLabel.setText("Pending client request");
+            adminRequestArea.setText(entry);
+            adminRequestArea.setCaretPosition(0);
+        } catch (IOException e) {
+            adminRequestStatusLabel.setText("Unable to load pending request");
+            adminRequestArea.setText("Error reading pending request.");
+        }
+    }
+
+    private void submitAdminDecision(String decision) {
+        try {
+            Map<String, String> pendingRequest = service.readPendingRequest();
+            String requestId = pendingRequest.get("REQUEST_ID");
+            String entry = pendingRequest.get("ENTRY");
+
+            if (requestId == null || requestId.isBlank() || entry == null || entry.isBlank()) {
+                JOptionPane.showMessageDialog(frame, "No pending client request.");
+                return;
+            }
+
+            service.writeAdminDecision(requestId, decision);
+            adminRequestStatusLabel.setText("Last response sent: " + decision);
+            adminRequestArea.setText(entry + "\n\nDecision sent: " + decision);
+            refreshMonitor("Admin decision sent for request:\n" + entry + "\nSTATUS: " + decision);
+        } catch (IOException e) {
+            JOptionPane.showMessageDialog(frame, "Unable to send admin decision.");
+        }
+    }
+
     private void clear() {
         idField.setText(""); infoField.setText(""); durField.setText(""); deadlineField.setText("");
     }
 
-    // Admin Screen - DH
-    public JPanel createAdminScreen(CloudDataService service) {
-        JPanel adminPanel = new JPanel(new GridBagLayout());
-        adminPanel.setBackground(new Color(30, 30, 35));
-        adminPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
-
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        gbc.gridwidth = 2;
-        gbc.anchor = GridBagConstraints.CENTER;
-        gbc.insets = new Insets(10, 10, 10, 10);
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.weightx = 1.0;
-
-        JLabel titleLabel = new JLabel("Admin Screen");
-        titleLabel.setForeground(Color.black);
-        titleLabel.setFont(new Font("SansSerif", Font.BOLD, 24));
-        titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
-        adminPanel.add(titleLabel, gbc);
-
-        gbc.gridy = 1;
-        gbc.gridwidth = 2;
-        JButton btnCalcTimes = new JButton("Calculate Completion Times");
-        btnCalcTimes.setFont(new Font("SansSerif", Font.BOLD, 14));
-        btnCalcTimes.setBackground(new Color(70, 130, 180));
-        btnCalcTimes.setForeground(Color.RED);
-        btnCalcTimes.addActionListener(e -> calculateCompletionTimes());
-        adminPanel.add(btnCalcTimes, gbc);
-
-        gbc.gridy = 2;
-        JButton acceptBtn = new JButton("Accept Job");
-        acceptBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
-        acceptBtn.addActionListener(e -> JOptionPane.showMessageDialog(frame, "Job Accepted!"));
-        adminPanel.add(acceptBtn, gbc);
-
-        gbc.gridy = 3;
-        JButton rejectBtn = new JButton("Reject Job");
-        rejectBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
-        rejectBtn.addActionListener(e -> JOptionPane.showMessageDialog(frame, "Job Rejected!"));
-        adminPanel.add(rejectBtn, gbc);
-
-        gbc.gridy = 4;
-        JButton backBtn = new JButton("Back to Home");
-        backBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
-        backBtn.addActionListener(e -> showScreen(createHomePanel(service)));
-        adminPanel.add(backBtn, gbc);
-
-        return adminPanel;
-    }
 }
