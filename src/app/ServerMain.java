@@ -86,7 +86,7 @@ public class ServerMain {//Philip
                     String deadlineStr = parseField(entry, "DEADLINE");
 
                     LocalDateTime arrivalTime = LocalDateTime.now();
-                    LocalDateTime deadlineTime = "N/A".equals(deadlineStr) ? null
+                    LocalDateTime deadlineTime = (deadlineStr.isBlank() || "N/A".equals(deadlineStr)) ? null
                         : LocalDateTime.parse(deadlineStr, dtf);
 
                     Job job = Job.createJob(id, info, duration, arrivalTime, deadlineTime);
