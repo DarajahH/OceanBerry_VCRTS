@@ -240,13 +240,13 @@ public class VCRTSDashboard {
 
         gbc.gridy = 3;
         gbc.gridwidth = 2;
-        JButton acceptBtn = new JButton("Accept Job");
+        JButton acceptBtn = new JButton("Accept Vehicle & Job");
         acceptBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
         acceptBtn.addActionListener(e -> submitAdminDecision("ACCEPTED"));
         adminPanel.add(acceptBtn, gbc);
 
         gbc.gridy = 4;
-        JButton rejectBtn = new JButton("Reject Job");
+        JButton rejectBtn = new JButton("Reject Vehicle & Job");
         rejectBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
         rejectBtn.addActionListener(e -> submitAdminDecision("REJECTED"));
         adminPanel.add(rejectBtn, gbc);
