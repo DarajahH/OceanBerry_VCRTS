@@ -22,6 +22,7 @@ public class CloudDataService {
     private final Path jobPath;
     private final Path pendingRequestPath;
     private final Path adminDecisionPath;
+    private final Path notificationsPath;
     private String currentUsername;
 
     public CloudDataService(Path logPath, Path userPath) {
@@ -34,6 +35,7 @@ public class CloudDataService {
         this.jobPath = jobPath;
         this.pendingRequestPath = logPath.resolveSibling("pending_request.txt");
         this.adminDecisionPath = logPath.resolveSibling("admin_decision.txt");
+        this.notificationsPath = logPath.resolveSibling("notifications.txt");
     }
 
     public void appendLog(String entry) throws IOException {
@@ -243,11 +245,19 @@ public class CloudDataService {
     }
 
     public synchronized void writePendingRequest(String requestId, String entry) throws IOException {
-        String payload = "REQUEST_ID:" + encodeField(requestId) + System.lineSeparator()
-            + "ENTRY:" + encodeField(entry) + System.lineSeparator();
+        writePendingRequest(requestId, entry, null);
+    }
+
+    public synchronized void writePendingRequest(String requestId, String entry, String submitter) throws IOException {
+        StringBuilder payload = new StringBuilder();
+        payload.append("REQUEST_ID:").append(encodeField(requestId)).append(System.lineSeparator());
+        payload.append("ENTRY:").append(encodeField(entry)).append(System.lineSeparator());
+        if (submitter != null && !submitter.isBlank()) {
+            payload.append("SUBMITTER:").append(encodeField(submitter)).append(System.lineSeparator());
+        }
         Files.writeString(
             pendingRequestPath,
-            payload,
+            payload.toString(),
             StandardCharsets.UTF_8,
             StandardOpenOption.CREATE,
             StandardOpenOption.TRUNCATE_EXISTING
@@ -315,6 +325,58 @@ public class CloudDataService {
 
     public synchronized void clearAdminDecision() throws IOException {
         Files.deleteIfExists(adminDecisionPath);
+    }
+
+    public synchronized void addNotification(String username, String message) throws IOException {
+        if (username == null || username.isBlank() || message == null || message.isBlank()) {
+            return;
+        }
+        String line = encodeField(username) + JOB_FIELD_DELIMITER
+            + encodeField(message) + JOB_FIELD_DELIMITER
+            + "UNREAD" + System.lineSeparator();
+        Files.writeString(
+            notificationsPath,
+            line,
+            StandardCharsets.UTF_8,
+            StandardOpenOption.CREATE,
+            StandardOpenOption.APPEND
+        );
+    }
+
+    public synchronized List<String> getUnreadNotifications(String username) throws IOException {
+        if (username == null || username.isBlank() || !Files.exists(notificationsPath)) {
+            return Collections.emptyList();
+        }
+        List<String> unread = new ArrayList<>();
+        for (String line : Files.readAllLines(notificationsPath, StandardCharsets.UTF_8)) {
+            String[] parts = line.split(JOB_FIELD_DELIMITER, -1);
+            if (parts.length >= 3
+                    && decodeField(parts[0]).equals(username)
+                    && "UNREAD".equals(parts[2])) {
+                unread.add(decodeField(parts[1]));
+            }
+        }
+        return unread;
+    }
+
+    public synchronized void markNotificationsRead(String username) throws IOException {
+        if (username == null || username.isBlank() || !Files.exists(notificationsPath)) {
+            return;
+        }
+        List<String> lines = Files.readAllLines(notificationsPath, StandardCharsets.UTF_8);
+        List<String> updated = new ArrayList<>();
+        for (String line : lines) {
+            String[] parts = line.split(JOB_FIELD_DELIMITER, -1);
+            if (parts.length >= 3
+                    && decodeField(parts[0]).equals(username)
+                    && "UNREAD".equals(parts[2])) {
+                updated.add(parts[0] + JOB_FIELD_DELIMITER + parts[1] + JOB_FIELD_DELIMITER + "READ");
+            } else {
+                updated.add(line);
+            }
+        }
+        Files.write(notificationsPath, updated, StandardCharsets.UTF_8,
+            StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
     }
 
     //Serializes a job object to a string - NAEEM

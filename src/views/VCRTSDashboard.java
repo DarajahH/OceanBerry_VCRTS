@@ -34,6 +34,7 @@ public class VCRTSDashboard {
     private JTextArea adminRequestArea;
     private JLabel adminRequestStatusLabel;
     private Timer adminRefreshTimer;
+    private Timer notificationTimer;
 
     public VCRTSDashboard(CloudDataService service, String currentUserRole) {
        this.service = service;
@@ -84,6 +85,11 @@ public class VCRTSDashboard {
 
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
+
+        if (isClientUser()) {
+            showUnreadNotifications();
+            startNotificationTimer();
+        }
     }
     
     // --- PANEL CREATION METHODS ---
@@ -271,8 +277,16 @@ public class VCRTSDashboard {
         title.setFont(new Font("SansSerif", Font.BOLD, 18));
         header.add(title, BorderLayout.WEST);
 
+        JLabel roleLabel = new JLabel("Role: " + currentUserRole);
+        roleLabel.setForeground(Color.LIGHT_GRAY);
+        roleLabel.setFont(new Font("SansSerif", Font.PLAIN, 14));
+        roleLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        header.add(roleLabel, BorderLayout.CENTER);
+
         JButton logoutBtn = new JButton("Logout");
         logoutBtn.addActionListener(e -> {
+            stopNotificationTimer();
+            stopAdminRefreshTimer();
             frame.dispose();
             new LoginScreen(service);
         });
@@ -405,10 +419,10 @@ public class VCRTSDashboard {
 
         gbc.gridx = 0;
         gbc.gridy = 5;
-        panel.add(createWhiteLabel("Job Deadline (YYYY/MM/DD HH:MM:SS):"), gbc);
-        JTextField deadlineInput = new JTextField();
+        panel.add(createWhiteLabel("Deadline (YYYY/MM/DD HH:MM:SS):"), gbc);
+        JTextField taskDeadlineField = new JTextField();
         gbc.gridx = 1;
-        panel.add(deadlineInput, gbc);
+        panel.add(taskDeadlineField, gbc);
 
         gbc.gridx = 0;
         gbc.gridy = 6;
@@ -418,7 +432,7 @@ public class VCRTSDashboard {
         submitBtn.addActionListener(e -> {
             if (ownerIdField.getText().isBlank() || taskField.getText().isBlank()
                     || vehicleField.getText().isBlank() || priorityField.getText().isBlank()
-                    || deadlineInput.getText().isBlank()) {
+                    || taskDeadlineField.getText().isBlank()) {
                 JOptionPane.showMessageDialog(frame, "Please complete all Task Owner fields.");
                 return;
             }
@@ -434,10 +448,9 @@ public class VCRTSDashboard {
                 JOptionPane.showMessageDialog(frame, "Priority must be between 1 and 5.");
                 return;
             }
-            String deadlineText = deadlineInput.getText().trim();
-            LocalDateTime deadlineTime;
+            String deadlineText = taskDeadlineField.getText().trim();
             try {
-                deadlineTime = LocalDateTime.parse(deadlineText, dtf);
+                LocalDateTime.parse(deadlineText, dtf);
             } catch (java.time.format.DateTimeParseException ex) {
                 JOptionPane.showMessageDialog(frame, "Deadline must use format YYYY/MM/DD HH:MM:SS.");
                 return;
@@ -448,7 +461,7 @@ public class VCRTSDashboard {
                 taskField.getText().trim(),
                 vehicleField.getText().trim(),
                 priority,
-                dtf.format(deadlineTime));
+                deadlineText);
             try {
                 service.appendLog(entry);
                 refreshMonitor("Task Owner submitted to VC:\n" + entry);
@@ -516,7 +529,8 @@ public class VCRTSDashboard {
         JButton submitBtn = new JButton("Submit to VC");
         submitBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
         submitBtn.addActionListener(e -> {
-            if (ownerIdField.getText().isBlank() || vehicleIdField.getText().isBlank() || statusField.getText().isBlank() || availabilityField.getText().isBlank()) {
+            if (ownerIdField.getText().isBlank() || vehicleIdField.getText().isBlank()
+                    || statusField.getText().isBlank() || availabilityField.getText().isBlank()) {
                 JOptionPane.showMessageDialog(frame, "Please complete all Vehicle Owner fields.");
                 return;
             }
@@ -634,9 +648,7 @@ public class VCRTSDashboard {
         String id = idField.getText().trim();
         String info = infoField.getText().trim();
         String dur = durField.getText().trim();
-        String deadline = (deadlineField != null && deadlineField.isVisible()) ? deadlineField.getText().trim() : "N/A";
         int duration;
-
 
         if (id.isEmpty() || info.isEmpty() || dur.isEmpty()) {
             JOptionPane.showMessageDialog(frame, "Please enter all required fields.");
@@ -655,52 +667,38 @@ public class VCRTSDashboard {
             return;
         }
 
-        if ("CLIENT".equals(role) && deadline.isEmpty()) {
-            JOptionPane.showMessageDialog(frame, "Client jobs must include a deadline.");
-            return;
-        }
-
         try {
             LocalDateTime arrivalTime = LocalDateTime.now();
-            LocalDateTime deadlineTime = deadlineField.isVisible()
-                ? LocalDateTime.parse(deadline, dtf)
-                : null;
-            String formattedDeadline = deadlineTime == null ? "N/A" : dtf.format(deadlineTime);
-            String entry = String.format("[%s] ROLE:%s | ID:%s | INFO:%s | DURATION:%d | DEADLINE:%s",
-                dtf.format(arrivalTime), role, id, info, duration, formattedDeadline);
+            String entry = String.format("[%s] ROLE:%s | ID:%s | INFO:%s | DURATION:%d",
+                dtf.format(arrivalTime), role, id, info, duration);
 
-            // Send this fucker to VC Controller server over socket
             refreshMonitor("Connecting to VC Controller server...");
 
             Socket socket = new Socket("localhost", 9806);
             DataOutputStream outputStream = new DataOutputStream(socket.getOutputStream());
             DataInputStream inputStream = new DataInputStream(socket.getInputStream());
 
-            // Client sends the entry to server
             outputStream.writeUTF(entry);
+            outputStream.writeUTF(service.getCurrentUsername() != null ? service.getCurrentUsername() : "");
 
-            // Client should read acknowledge from server
             String ack = inputStream.readUTF();
             refreshMonitor("Server response: " + ack + " - Pending approval...");
 
-            // Client reads the final decision from server(accept or nah)
-            String decision = inputStream.readUTF();
+            JOptionPane.showMessageDialog(frame,
+                "Your transaction has been submitted and is pending admin approval.\n"
+                + "You will be notified when a decision is made.",
+                "Transaction Submitted", JOptionPane.INFORMATION_MESSAGE);
+            clear();
 
-            if ("ACCEPTED".equals(decision)) {
-                refreshMonitor("FINAL STATUS: ACCEPTED\n\nSaved entry:\n" + entry);
-                clear();
-                if (!canViewVcrtsLogs()) {
-                    JOptionPane.showMessageDialog(frame, "Transaction accepted and saved.");
-                }
-            } else {
-                refreshMonitor("FINAL STATUS: REJECTED\n\nRejected entry:\n" + entry);
-                JOptionPane.showMessageDialog(frame, "Request rejected by VC Controller. Nothing was saved.");
-            }
-
-            // Connection close
-            inputStream.close();
-            outputStream.close();
-            socket.close();
+            // Keep socket open on a background thread until admin decides, then close
+            new Thread(() -> {
+                try {
+                    inputStream.readUTF();
+                    inputStream.close();
+                    outputStream.close();
+                    socket.close();
+                } catch (IOException ignored) {}
+            }).start();
 
         } catch (java.time.format.DateTimeParseException e) {
             JOptionPane.showMessageDialog(frame, "Deadline must use format yyyy/MM/dd HH:mm:ss.");
@@ -824,6 +822,7 @@ public class VCRTSDashboard {
             Map<String, String> pendingRequest = service.readPendingRequest();
             String requestId = pendingRequest.get("REQUEST_ID");
             String entry = pendingRequest.get("ENTRY");
+            String submitter = pendingRequest.get("SUBMITTER");
 
             if (requestId == null || requestId.isBlank() || entry == null || entry.isBlank()) {
                 JOptionPane.showMessageDialog(frame, "No pending client request.");
@@ -831,11 +830,64 @@ public class VCRTSDashboard {
             }
 
             service.writeAdminDecision(requestId, decision);
+
+            if (submitter != null && !submitter.isBlank()) {
+                String notifMsg = "Your job request was " + decision + ":\n" + entry;
+                service.addNotification(submitter, notifMsg);
+            }
+
             adminRequestStatusLabel.setText("Last response sent: " + decision);
             adminRequestArea.setText(entry + "\n\nDecision sent: " + decision);
             refreshMonitor("Admin decision sent for request:\n" + entry + "\nSTATUS: " + decision);
         } catch (IOException e) {
             JOptionPane.showMessageDialog(frame, "Unable to send admin decision.");
+        }
+    }
+
+    private void showUnreadNotifications() {
+        try {
+            String username = service.getCurrentUsername();
+            if (username == null) return;
+            List<String> unread = service.getUnreadNotifications(username);
+            if (unread.isEmpty()) return;
+
+            StringBuilder sb = new StringBuilder();
+            for (String msg : unread) {
+                sb.append(msg).append("\n\n");
+            }
+            service.markNotificationsRead(username);
+
+            JTextArea textArea = new JTextArea(sb.toString().trim());
+            textArea.setEditable(false);
+            textArea.setLineWrap(true);
+            textArea.setWrapStyleWord(true);
+            textArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
+            JScrollPane scrollPane = new JScrollPane(textArea);
+            scrollPane.setPreferredSize(new Dimension(450, 250));
+            JOptionPane.showMessageDialog(frame, scrollPane,
+                "Notifications (" + unread.size() + ")", JOptionPane.INFORMATION_MESSAGE);
+        } catch (IOException ignored) {}
+    }
+
+    private void startNotificationTimer() {
+        stopNotificationTimer();
+        notificationTimer = new Timer(3000, e -> {
+            try {
+                String username = service.getCurrentUsername();
+                if (username == null) return;
+                List<String> unread = service.getUnreadNotifications(username);
+                if (!unread.isEmpty()) {
+                    showUnreadNotifications();
+                }
+            } catch (IOException ignored) {}
+        });
+        notificationTimer.start();
+    }
+
+    private void stopNotificationTimer() {
+        if (notificationTimer != null) {
+            notificationTimer.stop();
+            notificationTimer = null;
         }
     }
 

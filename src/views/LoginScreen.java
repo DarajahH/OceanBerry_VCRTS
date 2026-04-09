@@ -24,7 +24,6 @@ public class LoginScreen {
 
         JTextField userField = new JTextField(15);
         JPasswordField passField = new JPasswordField(15);
-        JComboBox<String> roleBox = new JComboBox<>(new String[]{"CLIENT", "OWNER", "ADMIN"});
         JButton loginBtn = new JButton("Login");
         JButton regBtn = new JButton("Create Account");
 
@@ -37,10 +36,8 @@ public class LoginScreen {
         gbc.gridy = 2; frame.add(userField, gbc);
         gbc.gridy = 3; frame.add(new JLabel("<html><font color='white'>Password:</font></html>"), gbc);
         gbc.gridy = 4; frame.add(passField, gbc);
-        gbc.gridy = 5; frame.add(new JLabel("<html><font color='white'>Account Role:</font></html>"), gbc);
-        gbc.gridy = 6; frame.add(roleBox, gbc);
-        gbc.gridy = 7; frame.add(loginBtn, gbc);
-        gbc.gridy = 8; frame.add(regBtn, gbc);
+        gbc.gridy = 5; frame.add(loginBtn, gbc);
+        gbc.gridy = 6; frame.add(regBtn, gbc);
 
       loginBtn.addActionListener(e -> {
             // USING INSTANCE METHOD
@@ -79,24 +76,26 @@ public class LoginScreen {
         regBtn.addActionListener(e -> {
             String username = userField.getText().trim();
             String password = new String(passField.getPassword()).trim();
-            String role = ((String) roleBox.getSelectedItem()).trim().toUpperCase();
 
             if (username.isEmpty() || password.isEmpty()) {
                 JOptionPane.showMessageDialog(frame, "Username and password cannot be blank.");
                 return;
             }
 
+            String[] roles = {"CLIENT", "OWNER", "ADMIN"};
+            String role = (String) JOptionPane.showInputDialog(
+                frame, "Select your account role:", "Account Role",
+                JOptionPane.QUESTION_MESSAGE, null, roles, roles[0]);
+            if (role == null) return;
+
             try {
-                // USING INSTANCE METHOD
                 service.registerUser(username, password, role);
                 JOptionPane.showMessageDialog(frame, "Account Created!");
             } catch (IllegalArgumentException ex) {
                 JOptionPane.showMessageDialog(frame, ex.getMessage());
-            } catch (Exception ex) { 
-                JOptionPane.showMessageDialog(frame, "Error saving user."); 
-            };
-
-            
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(frame, "Error saving user.");
+            }
         });
 
         // Center the frame on screen
