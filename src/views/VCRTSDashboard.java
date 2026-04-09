@@ -34,6 +34,7 @@ public class VCRTSDashboard {
     private JTextArea adminRequestArea;
     private JLabel adminRequestStatusLabel;
     private Timer adminRefreshTimer;
+    private Timer notificationTimer;
 
     public VCRTSDashboard(CloudDataService service, String currentUserRole) {
        this.service = service;
@@ -64,25 +65,31 @@ public class VCRTSDashboard {
         leftCardContainer.add(createVehicleOwnerScreen(service), "VEHICLE_OWNER_SCREEN");
         leftCardContainer.setBackground(new Color(30, 30, 35));
 
-        // 4. Create the Right Panel (Monitor)
-        JPanel rightMonitorPanel = createMonitorPanel();
-
-        // 5. Split Pane (Holds the Card Container on the left, Monitor on the right)
-        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, leftCardContainer, rightMonitorPanel);
-        splitPane.setDividerLocation(400); 
-        splitPane.setDividerSize(2);
-        splitPane.setBorder(null);
-        frame.add(splitPane, BorderLayout.CENTER);
-
-        
-
+        // 4. Layout: split with monitor for owner/admin, content-only for client
+        if (canViewVcrtsLogs()) {
+            JPanel rightMonitorPanel = createMonitorPanel();
+            JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, leftCardContainer, rightMonitorPanel);
+            splitPane.setDividerLocation(400);
+            splitPane.setDividerSize(2);
+            splitPane.setBorder(null);
+            frame.add(splitPane, BorderLayout.CENTER);
+        } else {
+            frame.add(leftCardContainer, BorderLayout.CENTER);
+        }
 
         // Initialize state:
         adjustFields();
-        refreshMonitor(null);
+        if (canViewVcrtsLogs()) {
+            refreshMonitor(null);
+        }
 
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
+
+        if (isClientUser()) {
+            showUnreadNotifications();
+            startNotificationTimer();
+        }
     }
     
     // --- PANEL CREATION METHODS ---
@@ -126,34 +133,21 @@ public class VCRTSDashboard {
         gbc.weighty = 0.1;
         panel.add(subLabel, gbc);
 
-        // Submission Button now brings users to the form screen instead of directly moving into submission Panel.
-
-/* Calculate Completion Times Button was left in for User efficiency 
- This will trigger the logic to calculate and display completion times based on existing job records. -DH
-*/
-        JButton btnCalcTimes = new JButton("Calculate Completion Times");
-        btnCalcTimes.setFont(new Font("SansSerif", Font.BOLD, 14));
-        btnCalcTimes.addActionListener(e -> calculateCompletionTimes());
-        
         gbc.weighty = 0.1;
-        gbc.insets = new Insets(10, 0, 20, 0); 
-        gbc.gridy = 3; panel.add(btnCalcTimes, gbc);
+        gbc.insets = new Insets(10, 0, 20, 0);
 
-        int nextRow = 4;
+        int nextRow = 3;
+        if (isOwnerUser()) {
+            JButton btnCalcTimes = new JButton("Calculate Completion Times");
+            btnCalcTimes.setFont(new Font("SansSerif", Font.BOLD, 14));
+            btnCalcTimes.addActionListener(e -> calculateCompletionTimes());
+            gbc.gridy = nextRow++;
+            panel.add(btnCalcTimes, gbc);
+        }
         if (isClientUser()) {
             JButton btnOpenForm = new JButton("Submit New Transaction");
             btnOpenForm.setFont(new Font("SansSerif", Font.BOLD, 14));
-            btnOpenForm.addActionListener(e -> {
-                frame.getContentPane().removeAll();
-                frame.add(createHeader(), BorderLayout.NORTH);
-                JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, createSubmissionPanel(), createMonitorPanel());
-                splitPane.setDividerLocation(400);
-                splitPane.setDividerSize(2);
-                splitPane.setBorder(null);
-                frame.add(splitPane, BorderLayout.CENTER);
-                frame.revalidate();
-                frame.repaint();
-            });
+            btnOpenForm.addActionListener(e -> showScreen(createSubmissionPanel()));
             gbc.gridy = nextRow++;
             gbc.insets = new Insets(20, 0, 10, 0);
             panel.add(btnOpenForm, gbc);
@@ -254,13 +248,13 @@ public class VCRTSDashboard {
         adminPanel.add(btnCalcTimes, gbc);
 
         gbc.gridy = 4;
-        JButton acceptBtn = new JButton("Accept Job");
+        JButton acceptBtn = new JButton("Accept");
         acceptBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
         acceptBtn.addActionListener(e -> submitAdminDecision("ACCEPTED"));
         adminPanel.add(acceptBtn, gbc);
 
         gbc.gridy = 5;
-        JButton rejectBtn = new JButton("Reject Job");
+        JButton rejectBtn = new JButton("Reject");
         rejectBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
         rejectBtn.addActionListener(e -> submitAdminDecision("REJECTED"));
         adminPanel.add(rejectBtn, gbc);
@@ -291,8 +285,16 @@ public class VCRTSDashboard {
         title.setFont(new Font("SansSerif", Font.BOLD, 18));
         header.add(title, BorderLayout.WEST);
 
+        JLabel roleLabel = new JLabel("Role: " + currentUserRole);
+        roleLabel.setForeground(Color.LIGHT_GRAY);
+        roleLabel.setFont(new Font("SansSerif", Font.PLAIN, 14));
+        roleLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        header.add(roleLabel, BorderLayout.CENTER);
+
         JButton logoutBtn = new JButton("Logout");
         logoutBtn.addActionListener(e -> {
+            stopNotificationTimer();
+            stopAdminRefreshTimer();
             frame.dispose();
             new LoginScreen(service);
         });
@@ -386,11 +388,15 @@ public class VCRTSDashboard {
     private void showScreen(JPanel contentPanel) {//DH
         frame.getContentPane().removeAll();
         frame.add(createHeader(), BorderLayout.NORTH);
-        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, contentPanel, createMonitorPanel());
-        splitPane.setDividerLocation(400);
-        splitPane.setDividerSize(2);
-        splitPane.setBorder(null);
-        frame.add(splitPane, BorderLayout.CENTER);
+        if (canViewVcrtsLogs()) {
+            JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, contentPanel, createMonitorPanel());
+            splitPane.setDividerLocation(400);
+            splitPane.setDividerSize(2);
+            splitPane.setBorder(null);
+            frame.add(splitPane, BorderLayout.CENTER);
+        } else {
+            frame.add(contentPanel, BorderLayout.CENTER);
+        }
         frame.revalidate();
         frame.repaint();
     }
@@ -436,27 +442,36 @@ public class VCRTSDashboard {
 
         gbc.gridx = 0;
         gbc.gridy = 4;
-        panel.add(createWhiteLabel("Priority Level:"), gbc);
-        JTextField priorityField = new JTextField();
+        panel.add(createWhiteLabel("Deadline (YYYY/MM/DD HH:MM:SS):"), gbc);
+        JTextField taskDeadlineField = new JTextField();
         gbc.gridx = 1;
-        panel.add(priorityField, gbc);
+        panel.add(taskDeadlineField, gbc);
 
         gbc.gridx = 0;
         gbc.gridy = 5;
         gbc.gridwidth = 2;
-        JButton submitBtn = new JButton("Submit to VC"); //DH - Submit Button
+        JButton submitBtn = new JButton("Submit to VC");
         submitBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
         submitBtn.addActionListener(e -> {
-            if (ownerIdField.getText().isBlank() || taskField.getText().isBlank() || vehicleField.getText().isBlank() || priorityField.getText().isBlank()) {
+            if (ownerIdField.getText().isBlank() || taskField.getText().isBlank()
+                    || vehicleField.getText().isBlank()
+                    || taskDeadlineField.getText().isBlank()) {
                 JOptionPane.showMessageDialog(frame, "Please complete all Task Owner fields.");
                 return;
             }
-            String entry = String.format("[%s] ROLE:TASK_OWNER | ID:%s | TASK:%s | VEHICLE:%s | PRIORITY:%s",
+            String deadlineText = taskDeadlineField.getText().trim();
+            try {
+                LocalDateTime.parse(deadlineText, dtf);
+            } catch (java.time.format.DateTimeParseException ex) {
+                JOptionPane.showMessageDialog(frame, "Deadline must use format YYYY/MM/DD HH:MM:SS.");
+                return;
+            }
+            String entry = String.format("[%s] ROLE:TASK_OWNER | ID:%s | TASK:%s | VEHICLE:%s | DEADLINE:%s",
                 dtf.format(LocalDateTime.now()),
                 ownerIdField.getText().trim(),
                 taskField.getText().trim(),
                 vehicleField.getText().trim(),
-                priorityField.getText().trim());
+                deadlineText);
             try {
                 service.appendLog(entry);
                 refreshMonitor("Task Owner submitted to VC:\n" + entry);
@@ -467,7 +482,7 @@ public class VCRTSDashboard {
         });
         panel.add(submitBtn, gbc);
 
-        gbc.gridy = 6;
+        gbc.gridy = 7;
         panel.add(createBackToHomeButton(service), gbc);
         return panel;
     }
@@ -600,8 +615,8 @@ public class VCRTSDashboard {
         infoLabel.setText(isClient ? "Job Description:" : "Vehicle Info:");
         durLabel.setText(isClient ? "Job Duration (Hrs):" : "Residency (Hrs):");
 
-        deadlineLabel.setVisible(isClient);
-        deadlineField.setVisible(isClient);
+        if (deadlineLabel != null) deadlineLabel.setVisible(isClient);
+        if (deadlineField != null) deadlineField.setVisible(isClient);
         frame.revalidate(); // Refreshes the UI so hidden fields don't leave weird spaces
     }
 
@@ -663,6 +678,11 @@ public class VCRTSDashboard {
             return;
         }
 
+        try {
+            LocalDateTime arrivalTime = LocalDateTime.now();
+            String entry = String.format("[%s] ROLE:%s | ID:%s | INFO:%s | DURATION:%d",
+                dtf.format(arrivalTime), role, id, info, duration);
+
         if ("CLIENT".equals(role) && deadline.isEmpty()) {
             JOptionPane.showMessageDialog(frame, "Client jobs must include a deadline.");
             return;
@@ -684,28 +704,27 @@ public class VCRTSDashboard {
             DataOutputStream outputStream = new DataOutputStream(socket.getOutputStream());
             DataInputStream inputStream = new DataInputStream(socket.getInputStream());
 
-            // Client sends the entry to server
             outputStream.writeUTF(entry);
+            outputStream.writeUTF(service.getCurrentUsername() != null ? service.getCurrentUsername() : "");
 
-            // Client should read acknowledge from server
             String ack = inputStream.readUTF();
             refreshMonitor("Server response: " + ack + " - Pending approval...");
 
-            // Client reads the final decision from server(accept or nah)
-            String decision = inputStream.readUTF();
+            JOptionPane.showMessageDialog(frame,
+                "Your transaction has been submitted and is pending admin approval.\n"
+                + "You will be notified when a decision is made.",
+                "Transaction Submitted", JOptionPane.INFORMATION_MESSAGE);
+            clear();
 
-            if ("ACCEPTED".equals(decision)) {
-                refreshMonitor("FINAL STATUS: ACCEPTED\n\nSaved entry:\n" + entry);
-                clear();
-            } else {
-                refreshMonitor("FINAL STATUS: REJECTED\n\nRejected entry:\n" + entry);
-                JOptionPane.showMessageDialog(frame, "Request rejected by VC Controller. Nothing was saved.");
-            }
-
-            // Connection close
-            inputStream.close();
-            outputStream.close();
-            socket.close();
+            // Keep socket open on a background thread until admin decides, then close
+            new Thread(() -> {
+                try {
+                    inputStream.readUTF();
+                    inputStream.close();
+                    outputStream.close();
+                    socket.close();
+                } catch (IOException ignored) {}
+            }).start();
 
         } catch (java.time.format.DateTimeParseException e) {
             JOptionPane.showMessageDialog(frame, "Deadline must use format yyyy/MM/dd HH:mm:ss.");
@@ -722,7 +741,12 @@ public class VCRTSDashboard {
         try {
             List<JobCompletionRecord> records = controller.calculateCompletionTimes();
             if (records.isEmpty()) {
-                refreshMonitor("No client jobs found.");
+                String msg = "No client jobs found.";
+                if (canViewVcrtsLogs()) {
+                    refreshMonitor(msg);
+                } else {
+                    JOptionPane.showMessageDialog(frame, msg);
+                }
                 return;
             }
 
@@ -730,6 +754,17 @@ public class VCRTSDashboard {
             results.append("FIFO Completion Times\n---------------------\n");
             for (JobCompletionRecord record : records) {
                 results.append(record.toDisplayString()).append("\n");
+            }
+
+            if (canViewVcrtsLogs()) {
+                refreshMonitor(results.toString().trim());
+            } else {
+                JTextArea textArea = new JTextArea(results.toString().trim());
+                textArea.setEditable(false);
+                textArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
+                JScrollPane scrollPane = new JScrollPane(textArea);
+                scrollPane.setPreferredSize(new Dimension(500, 300));
+                JOptionPane.showMessageDialog(frame, scrollPane, "Completion Times", JOptionPane.INFORMATION_MESSAGE);
             }
             refreshMonitor(results.toString().trim());
         } catch (Exception e) {
@@ -751,7 +786,12 @@ public class VCRTSDashboard {
         return "CLIENT".equals(currentUserRole);
     }
 
+    private boolean canViewVcrtsLogs() {
+        return isOwnerUser() || isAdminUser();
+    }
+
     private void refreshMonitor(String resultSection) {
+        if (monitorArea == null) return;
         try {
             StringBuilder display = new StringBuilder();
             for (String line : service.readAllLogs()) {
@@ -809,6 +849,7 @@ public class VCRTSDashboard {
             Map<String, String> pendingRequest = service.readPendingRequest();
             String requestId = pendingRequest.get("REQUEST_ID");
             String entry = pendingRequest.get("ENTRY");
+            String submitter = pendingRequest.get("SUBMITTER");
 
             if (requestId == null || requestId.isBlank() || entry == null || entry.isBlank()) {
                 JOptionPane.showMessageDialog(frame, "No pending client request.");
@@ -816,6 +857,12 @@ public class VCRTSDashboard {
             }
 
             service.writeAdminDecision(requestId, decision);
+
+            if (submitter != null && !submitter.isBlank()) {
+                String notifMsg = "Your job request was " + decision + ":\n" + entry;
+                service.addNotification(submitter, notifMsg);
+            }
+
             adminRequestStatusLabel.setText("Last response sent: " + decision);
             adminRequestArea.setText(entry + "\n\nDecision sent: " + decision);
             refreshMonitor("Admin decision sent for request:\n" + entry + "\nSTATUS: " + decision);

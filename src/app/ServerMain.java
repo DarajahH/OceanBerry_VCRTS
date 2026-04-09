@@ -60,10 +60,10 @@ public class ServerMain {//Philip
             inputStream = new DataInputStream(socket.getInputStream());
             outputStream = new DataOutputStream(socket.getOutputStream());
 
-            // Read the submission entry from client
+            // Read the submission entry and submitter username from client
             String entry = inputStream.readUTF();
-            System.out.println("Request received from client: \"" + entry + "\"");
-
+            String submitter = inputStream.readUTF();
+            System.out.println("Request received from client \"" + submitter + "\": \"" + entry + "\"");
 
             // Step 1: Send acknowledge back to client
             outputStream.writeUTF("ACK");
@@ -71,7 +71,7 @@ public class ServerMain {//Philip
 
             String requestId = UUID.randomUUID().toString();
             service.clearAdminDecision();
-            service.writePendingRequest(requestId, entry);
+            service.writePendingRequest(requestId, entry, submitter);
             System.out.println("Pending admin review for request " + requestId);
 
             boolean accepted = waitForAdminDecision(service, requestId);
@@ -86,7 +86,7 @@ public class ServerMain {//Philip
                     String deadlineStr = parseField(entry, "DEADLINE");
 
                     LocalDateTime arrivalTime = LocalDateTime.now();
-                    LocalDateTime deadlineTime = "N/A".equals(deadlineStr) ? null
+                    LocalDateTime deadlineTime = (deadlineStr.isBlank() || "N/A".equals(deadlineStr)) ? null
                         : LocalDateTime.parse(deadlineStr, dtf);
 
                     Job job = Job.createJob(id, info, duration, arrivalTime, deadlineTime);
