@@ -87,8 +87,8 @@ public class VCRTSDashboard {
         frame.setVisible(true);
 
         if (isClientUser()) {
-            showUnreadNotifications();
-            startNotificationTimer();
+          //  showUnreadNotifications();
+            //startNotificationTimer();
         }
     }
     
@@ -293,7 +293,7 @@ public class VCRTSDashboard {
 
         JButton logoutBtn = new JButton("Logout");
         logoutBtn.addActionListener(e -> {
-            stopNotificationTimer();
+          //  stopNotificationTimer();
             stopAdminRefreshTimer();
             frame.dispose();
             new LoginScreen(service);
@@ -677,7 +677,7 @@ public class VCRTSDashboard {
             JOptionPane.showMessageDialog(frame, "Duration must be a number.");
             return;
         }
-
+/*
         try {
             LocalDateTime arrivalTime = LocalDateTime.now();
             String entry = String.format("[%s] ROLE:%s | ID:%s | INFO:%s | DURATION:%d",
@@ -686,7 +686,7 @@ public class VCRTSDashboard {
         if ("CLIENT".equals(role) && deadline.isEmpty()) {
             JOptionPane.showMessageDialog(frame, "Client jobs must include a deadline.");
             return;
-        }
+        }*/
 
         try {
             LocalDateTime arrivalTime = LocalDateTime.now();
