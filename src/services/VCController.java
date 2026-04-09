@@ -16,8 +16,7 @@ public class VCController {
     private String name;
     private String checkpoint;
     private final CloudDataService dataService;
-
-    // Constructor to initialize the VCController with a reference to the CloudDataService for data operations. EC
+ // Constructor to initialize the VCController with a reference to the CloudDataService for data operations. EC
     public VCController(CloudDataService dataService) {
         this.dataService = dataService;
     }
