@@ -240,18 +240,26 @@ public class VCRTSDashboard {
 
         gbc.gridy = 3;
         gbc.gridwidth = 2;
-        JButton acceptBtn = new JButton("Accept Vehicle & Job");
+        JButton btnCalcTimes = new JButton("Calculate Completion Times");
+        btnCalcTimes.setFont(new Font("SansSerif", Font.BOLD, 14));
+        btnCalcTimes.setBackground(new Color(70, 130, 180));
+        btnCalcTimes.setForeground(Color.RED);
+        btnCalcTimes.addActionListener(e -> calculateCompletionTimes());
+        adminPanel.add(btnCalcTimes, gbc);
+
+        gbc.gridy = 4;
+        JButton acceptBtn = new JButton("Accept");
         acceptBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
         acceptBtn.addActionListener(e -> submitAdminDecision("ACCEPTED"));
         adminPanel.add(acceptBtn, gbc);
 
-        gbc.gridy = 4;
-        JButton rejectBtn = new JButton("Reject Vehicle & Job");
+        gbc.gridy = 5;
+        JButton rejectBtn = new JButton("Reject");
         rejectBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
         rejectBtn.addActionListener(e -> submitAdminDecision("REJECTED"));
         adminPanel.add(rejectBtn, gbc);
 
-        gbc.gridy = 5;
+        gbc.gridy = 6;
         JButton backBtn = new JButton("Back to Home");
         backBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
         backBtn.addActionListener(e -> {
@@ -295,62 +303,84 @@ public class VCRTSDashboard {
         return header;
     }
 
-    private JPanel createSubmissionPanel() {
-        JPanel form = new JPanel(new GridBagLayout());
-        form.setBackground(new Color(30, 30, 35));
-        form.setBorder(new EmptyBorder(30, 30, 30, 30));
+    private JPanel createSubmissionPanel() { 
+        
+    //Renamed from createFormPanel to better reflect its purpose as the main interaction point for users 
+    // to submit new transactions and jobs. -DH
+        
+        JPanel panel = new JPanel(new GridBagLayout());
+        panel.setBackground(new Color(30, 30, 35));
+        panel.setBorder(new EmptyBorder(20, 20, 20, 20));
 
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.insets = new Insets(8, 10, 8, 10);
+        gbc.insets = new Insets(10, 10, 10, 10);
+        gbc.weightx = 1.0;
 
-        gbc.gridx = 0; gbc.gridy = 0; gbc.weightx = 0;
-        form.add(createWhiteLabel("Select Role:"), gbc);
+        // Role Selection
+        gbc.gridx = 0; gbc.gridy = 0;
+        panel.add(createWhiteLabel("Select Role:"), gbc);
+
         roleBox = new JComboBox<>(new String[]{"CLIENT"});
         roleBox.setEnabled(false);
         roleBox.addActionListener(e -> adjustFields());
-        gbc.gridx = 1; gbc.weightx = 1.0;
-        form.add(roleBox, gbc);
+        gbc.gridx = 1; 
+        panel.add(roleBox, gbc);
 
-        gbc.gridx = 0; gbc.gridy = 1; gbc.weightx = 0;
+        // Input Fields
+        gbc.gridx = 0; gbc.gridy = 1;
         idLabel = createWhiteLabel("Owner ID:");
-        form.add(idLabel, gbc);
-        idField = new JTextField(20);
-        gbc.gridx = 1; gbc.weightx = 1.0;
-        form.add(idField, gbc);
+        panel.add(idLabel, gbc);
+        idField = new JTextField();
+        gbc.gridx = 1; panel.add(idField, gbc);
 
-        gbc.gridx = 0; gbc.gridy = 2; gbc.weightx = 0;
+        gbc.gridx = 0; gbc.gridy = 2;
         infoLabel = createWhiteLabel("Vehicle Info:");
-        form.add(infoLabel, gbc);
-        infoField = new JTextField(20);
-        gbc.gridx = 1; gbc.weightx = 1.0;
-        form.add(infoField, gbc);
+        panel.add(infoLabel, gbc);
+        infoField = new JTextField();
+        gbc.gridx = 1; panel.add(infoField, gbc);
 
-        gbc.gridx = 0; gbc.gridy = 3; gbc.weightx = 0;
+        gbc.gridx = 0; gbc.gridy = 3;
         durLabel = createWhiteLabel("Residency (Hrs):");
-        form.add(durLabel, gbc);
-        durField = new JTextField(20);
-        gbc.gridx = 1; gbc.weightx = 1.0;
-        form.add(durField, gbc);
+        panel.add(durLabel, gbc);
+        durField = new JTextField("Please enter in the expected duration in hours. For example, '2' for 2 hours.");
+        gbc.gridx = 1; panel.add(durField, gbc);
 
+        gbc.gridx = 0; gbc.gridy = 4;
+        deadlineLabel = createWhiteLabel("Job Deadline (YYYY-MM-DD HR:MM:SS):");
+        panel.add(deadlineLabel, gbc);
+        deadlineField = new JTextField();
+        gbc.gridx = 1; panel.add(deadlineField, gbc);
+
+        // Buttons
         JButton submitBtn = new JButton("Submit Transaction");
         submitBtn.addActionListener(e -> saveEntry());
-        gbc.gridx = 0; gbc.gridy = 5; gbc.gridwidth = 2; gbc.weightx = 0;
-        gbc.insets = new Insets(20, 10, 8, 10);
-        form.add(submitBtn, gbc);
+        gbc.gridx = 0; gbc.gridy = 5; gbc.gridwidth = 2;
+        gbc.insets = new Insets(30, 10, 10, 10); // Extra top padding
+        panel.add(submitBtn, gbc);
 
+        /*
+        //Calculate Completion Times Button 
+        JButton calcBtn = new JButton("Calculate Completion Time");
+        calcBtn.addActionListener(e -> calculateCompletionTimes());
+        gbc.gridy = 6; gbc.insets = new Insets(10, 10, 10, 10);
+        panel.add(calcBtn, gbc);*/
+
+        /*  Home Button to return to the main dashboard/home screen 
+            without needing to log out and back in. -DH
+        */
         JButton homeBtn = new JButton("Back to Home");
-        homeBtn.addActionListener(e -> showScreen(createHomePanel(service)));
-        gbc.gridy = 6; gbc.insets = new Insets(8, 10, 8, 10);
-        form.add(homeBtn, gbc);
+        homeBtn.addActionListener(e -> { 
+            showScreen(createHomePanel(service));
+        });
+        gbc.gridy = 7; gbc.gridwidth = 2;
+        panel.add(homeBtn, gbc);
 
-        JPanel wrapper = new JPanel(new GridBagLayout());
-        wrapper.setBackground(new Color(30, 30, 35));
-        GridBagConstraints wgbc = new GridBagConstraints();
-        wgbc.anchor = GridBagConstraints.NORTH;
-        wgbc.weighty = 1.0;
-        wrapper.add(form, wgbc);
-        return wrapper;
+        // Spacer to push everything to the top
+        gbc.gridy = 8; gbc.weighty = 1.0;
+        panel.add(Box.createGlue(), gbc);
+
+        return panel;
     }
 
 //Show Screen method calls Panels - DH
@@ -509,8 +539,7 @@ public class VCRTSDashboard {
         JButton submitBtn = new JButton("Submit to VC");
         submitBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
         submitBtn.addActionListener(e -> {
-            if (ownerIdField.getText().isBlank() || vehicleIdField.getText().isBlank()
-                    || statusField.getText().isBlank() || availabilityField.getText().isBlank()) {
+            if (ownerIdField.getText().isBlank() || vehicleIdField.getText().isBlank() || statusField.getText().isBlank() || availabilityField.getText().isBlank()) {
                 JOptionPane.showMessageDialog(frame, "Please complete all Vehicle Owner fields.");
                 return;
             }
@@ -628,7 +657,9 @@ public class VCRTSDashboard {
         String id = idField.getText().trim();
         String info = infoField.getText().trim();
         String dur = durField.getText().trim();
+        String deadline = deadlineField.isVisible() ? deadlineField.getText().trim() : "N/A";
         int duration;
+
 
         if (id.isEmpty() || info.isEmpty() || dur.isEmpty()) {
             JOptionPane.showMessageDialog(frame, "Please enter all required fields.");
@@ -652,6 +683,21 @@ public class VCRTSDashboard {
             String entry = String.format("[%s] ROLE:%s | ID:%s | INFO:%s | DURATION:%d",
                 dtf.format(arrivalTime), role, id, info, duration);
 
+        if ("CLIENT".equals(role) && deadline.isEmpty()) {
+            JOptionPane.showMessageDialog(frame, "Client jobs must include a deadline.");
+            return;
+        }
+
+        try {
+            LocalDateTime arrivalTime = LocalDateTime.now();
+            LocalDateTime deadlineTime = deadlineField.isVisible()
+                ? LocalDateTime.parse(deadline, dtf)
+                : null;
+            String formattedDeadline = deadlineTime == null ? "N/A" : dtf.format(deadlineTime);
+            String entry = String.format("[%s] ROLE:%s | ID:%s | INFO:%s | DURATION:%d | DEADLINE:%s",
+                dtf.format(arrivalTime), role, id, info, duration, formattedDeadline);
+
+            // Send this fucker to VC Controller server over socket
             refreshMonitor("Connecting to VC Controller server...");
 
             Socket socket = new Socket("localhost", 9806);
@@ -720,6 +766,7 @@ public class VCRTSDashboard {
                 scrollPane.setPreferredSize(new Dimension(500, 300));
                 JOptionPane.showMessageDialog(frame, scrollPane, "Completion Times", JOptionPane.INFORMATION_MESSAGE);
             }
+            refreshMonitor(results.toString().trim());
         } catch (Exception e) {
             JOptionPane.showMessageDialog(frame, "Error calculating completion times.");
         }
@@ -756,7 +803,7 @@ public class VCRTSDashboard {
             }
 
             monitorArea.setText(display.toString());
-            monitorArea.setCaretPosition(monitorArea.getDocument().getLength());
+            monitorArea.setCaretPosition(monitorArea.getDocument().getLength()); // Auto-scroll to bottom
         } catch (IOException ignored) {}
     }
 
@@ -824,56 +871,8 @@ public class VCRTSDashboard {
         }
     }
 
-    private void showUnreadNotifications() {
-        try {
-            String username = service.getCurrentUsername();
-            if (username == null) return;
-            List<String> unread = service.getUnreadNotifications(username);
-            if (unread.isEmpty()) return;
-
-            StringBuilder sb = new StringBuilder();
-            for (String msg : unread) {
-                sb.append(msg).append("\n\n");
-            }
-            service.markNotificationsRead(username);
-
-            JTextArea textArea = new JTextArea(sb.toString().trim());
-            textArea.setEditable(false);
-            textArea.setLineWrap(true);
-            textArea.setWrapStyleWord(true);
-            textArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
-            JScrollPane scrollPane = new JScrollPane(textArea);
-            scrollPane.setPreferredSize(new Dimension(450, 250));
-            JOptionPane.showMessageDialog(frame, scrollPane,
-                "Notifications (" + unread.size() + ")", JOptionPane.INFORMATION_MESSAGE);
-        } catch (IOException ignored) {}
-    }
-
-    private void startNotificationTimer() {
-        stopNotificationTimer();
-        notificationTimer = new Timer(3000, e -> {
-            try {
-                String username = service.getCurrentUsername();
-                if (username == null) return;
-                List<String> unread = service.getUnreadNotifications(username);
-                if (!unread.isEmpty()) {
-                    showUnreadNotifications();
-                }
-            } catch (IOException ignored) {}
-        });
-        notificationTimer.start();
-    }
-
-    private void stopNotificationTimer() {
-        if (notificationTimer != null) {
-            notificationTimer.stop();
-            notificationTimer = null;
-        }
-    }
-
     private void clear() {
-        idField.setText(""); infoField.setText(""); durField.setText("");
-        if (deadlineField != null) deadlineField.setText("");
+        idField.setText(""); infoField.setText(""); durField.setText(""); deadlineField.setText("");
     }
 
 }

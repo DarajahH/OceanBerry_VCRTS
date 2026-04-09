@@ -24,6 +24,7 @@ public class LoginScreen {
 
         JTextField userField = new JTextField(15);
         JPasswordField passField = new JPasswordField(15);
+        JComboBox<String> roleBox = new JComboBox<>(new String[]{"CLIENT", "OWNER", "ADMIN"});
         JButton loginBtn = new JButton("Login");
         JButton regBtn = new JButton("Create Account");
 
@@ -93,9 +94,11 @@ public class LoginScreen {
                 JOptionPane.showMessageDialog(frame, "Account Created!");
             } catch (IllegalArgumentException ex) {
                 JOptionPane.showMessageDialog(frame, ex.getMessage());
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(frame, "Error saving user.");
-            }
+            } catch (Exception ex) { 
+                JOptionPane.showMessageDialog(frame, "Error saving user."); 
+            };
+
+            
         });
 
         // Center the frame on screen
