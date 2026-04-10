@@ -4,9 +4,9 @@ USE vcrts_db
 
 -- Table for the client jobs (ROLE: CLIENT)
 CREATE TABLE jobs (
-	id INT,
+	id INT PRIMARY KEY,
     job_id VARCHAR(50),
-    description     VARCHAR(255),
+    description VARCHAR(255),
     duration_hours  INT,
     arrival_time    DATETIME
 );
