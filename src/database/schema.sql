@@ -6,7 +6,10 @@ USE vcrts_db
 CREATE TABLE jobs (
     job_id VARCHAR(50) PRIMARY KEY,
     description VARCHAR(255),
-    duration_hours  INT,
-    arrival_time    DATETIME
+    duration_hours INT,
+    arrival_time DATETIME,
+    deadline_time DATETIME,
+    jobStatus ENUM ('in_progress', 'completed', 'rejected'),
+    completionTime DATETIME
 );
     
