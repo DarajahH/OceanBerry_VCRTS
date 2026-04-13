@@ -22,6 +22,7 @@ CREATE TABLE jobs (
     completionTime 	INT
 );
 
+-- Table for the vehicles owner submittor (ROLE: OWNER)
 CREATE TABLE vehicles_owner_submittor (
     id INT PRIMARY KEY,
     vehicle_id INT NOT NULL,
