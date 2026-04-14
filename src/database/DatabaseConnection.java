@@ -1,4 +1,5 @@
 package database;
+
 public class DatabaseConnection {
     private static final String DB_URL = "jdbc:sqlite:vcrts.db";
     private static final String DB_USERNAME = "root";
