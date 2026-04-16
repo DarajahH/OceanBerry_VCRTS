@@ -38,7 +38,7 @@ public class DatabaseService {
     // Create a public string method to get the current user role
     public String getUserRole(String username) throws SQLException {
         String sql = "SELECT role FROM users WHERE username = ?";
-
+        // use the try loop to provide the 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
@@ -55,5 +55,5 @@ public class DatabaseService {
     }
 
 
-    
+
 }
