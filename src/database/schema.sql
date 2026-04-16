@@ -20,7 +20,7 @@ CREATE TABLE jobs (
     arrival_time 	DATETIME,
     deadline_time 	DATETIME,
     jobStatus 		ENUM ('in_progress', 'completed', 'rejected'),
-    completionTime 	INT
+    completionTime 	DATETIME
     FOREIGN KEY (vehicle_id) REFERENCES vehicles(vehicle_id)
 );
 
