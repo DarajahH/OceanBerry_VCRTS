@@ -5,6 +5,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
@@ -12,6 +13,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import database.DatabaseService;
 import models.enums.JobStatus;
 import models.job.Job;
 
@@ -23,6 +25,7 @@ public class CloudDataService {
     private final Path pendingRequestPath;
     private final Path adminDecisionPath;
     private final Path notificationsPath;
+    private final DatabaseService db = new DatabaseService();
     private String currentUsername;
 
     public CloudDataService(Path logPath, Path userPath) {
@@ -72,14 +75,11 @@ public class CloudDataService {
             cleanRole = "CLIENT";
         }
 
-        String entry = cleanUsername + ":" + cleanPassword + ":" + cleanRole + System.lineSeparator();
-        Files.writeString(
-            userPath,
-            entry,
-            StandardCharsets.UTF_8,
-            StandardOpenOption.CREATE,
-            StandardOpenOption.APPEND
-        );
+        try {
+            db.registerUser(cleanUsername, cleanPassword, cleanRole);
+        } catch (SQLException e) {
+            throw new IOException("Database error while registering user: " + e.getMessage(), e);
+        }
     }
 
     public boolean validateUser(String username, String password) {
@@ -91,18 +91,11 @@ public class CloudDataService {
         }
 
         try {
-            if (!Files.exists(userPath)) {
-                return false;
+            if (db.validateUser(cleanUsername, cleanPassword)) {
+                currentUsername = cleanUsername;
+                return true;
             }
-            List<String> users = Files.readAllLines(userPath, StandardCharsets.UTF_8);
-            for (String line : users) {
-                String[] parts = line.split(":", 3);
-                if (parts.length >= 2 && parts[0].equals(cleanUsername) && parts[1].equals(cleanPassword)) {
-                    currentUsername = cleanUsername;
-                    return true;
-                }
-            }
-        } catch (IOException e) {
+        } catch (SQLException e) {
             e.printStackTrace();
         }
         return false;
@@ -114,20 +107,11 @@ public class CloudDataService {
             return false;
         }
         try {
-            if (!Files.exists(userPath)) {
-                return false;
-            }
-            List<String> users = Files.readAllLines(userPath, StandardCharsets.UTF_8);
-            for (String line : users) {
-                String[] parts = line.split(":", 3);
-                if (parts.length >= 1 && parts[0].equals(cleanUsername)) {
-                    return true;
-                }
-            }
-        } catch (IOException e) {
+            return db.userExists(cleanUsername);
+        } catch (SQLException e) {
             e.printStackTrace();
+            return false;
         }
-        return false;
     }
 
     public String getCurrentUsername() {
@@ -145,20 +129,11 @@ public class CloudDataService {
         }
 
         try {
-            if (!Files.exists(userPath)) {
-                return "CLIENT";
+            String role = db.getUserRole(cleanUsername);
+            if (role != null && !role.isBlank()) {
+                return role.toUpperCase();
             }
-            List<String> users = Files.readAllLines(userPath, StandardCharsets.UTF_8);
-            for (String line : users) {
-                String[] parts = line.split(":", 3);
-                if (parts.length >= 2 && parts[0].equals(cleanUsername)) {
-                    if (parts.length == 3 && !parts[2].isBlank()) {
-                        return parts[2].trim().toUpperCase();
-                    }
-                    return cleanUsername.equalsIgnoreCase("admin") ? "ADMIN" : "CLIENT";
-                }
-            }
-        } catch (IOException e) {
+        } catch (SQLException e) {
             e.printStackTrace();
         }
 
@@ -169,29 +144,27 @@ public class CloudDataService {
         if (job == null) {
             throw new IllegalArgumentException("Job cannot be null.");
         }
-        String entry = serializeJob(job) + System.lineSeparator();
-        Files.writeString(
-            jobPath,
-            entry,
-            StandardCharsets.UTF_8,
-            StandardOpenOption.CREATE,
-            StandardOpenOption.APPEND
-        );
+        try {
+            db.insertJob(job);
+        } catch (SQLException e) {
+            throw new IOException("Database error while inserting job: " + e.getMessage(), e);
+        }
     }
 
     public List<Job> readJobs() throws IOException {
-        if (!Files.exists(jobPath)) {
-            return Collections.emptyList();
+        try {
+            return db.getAllJobs();
+        } catch (SQLException e) {
+            throw new IOException("Database error while reading jobs: " + e.getMessage(), e);
         }
-        List<String> lines = Files.readAllLines(jobPath, StandardCharsets.UTF_8);
-        List<Job> jobs = new ArrayList<>();
-        for (String line : lines) {
-            Job job = parseJobLine(line);
-            if (job != null) {
-                jobs.add(job);
-            }
+    }
+
+    public void appendVehicle(String ownerId, String vehicleInfo, int residencyHours) throws IOException {
+        try {
+            db.insertVehicle(ownerId, vehicleInfo, residencyHours);
+        } catch (SQLException e) {
+            throw new IOException("Database error while inserting vehicle: " + e.getMessage(), e);
         }
-        return jobs;
     }
 
     public List<String> readClientLogs() throws IOException {

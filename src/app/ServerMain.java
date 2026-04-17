@@ -77,7 +77,7 @@ public class ServerMain {//Philip
             boolean accepted = waitForAdminDecision(service, requestId);
 
             if (accepted) {
-                //  decide if we save a job ! ! ! ! ! ! ! ! ! !!! !! ! 
+                //  decide if we save a job ! ! ! ! ! ! ! ! ! !!! !! !
                 String role = parseField(entry, "ROLE");
                 if ("CLIENT".equals(role)) {
                     String id = parseField(entry, "ID");
@@ -91,11 +91,16 @@ public class ServerMain {//Philip
 
                     Job job = Job.createJob(id, info, duration, arrivalTime, deadlineTime);
                     service.appendJob(job);
+                } else if ("OWNER".equals(role)) {
+                    String ownerId = parseField(entry, "ID");
+                    String info = parseField(entry, "INFO");
+                    int residency = Integer.parseInt(parseField(entry, "DURATION"));
+                    service.appendVehicle(ownerId, info, residency);
                 }
 
                 service.appendLog(entry);
                 outputStream.writeUTF("ACCEPTED");
-                System.out.println("Request ACCEPTED. Data saved to file.");
+                System.out.println("Request ACCEPTED. Data saved to database.");
             } else {
                 outputStream.writeUTF("REJECTED");
                 System.out.println("Request REJECTED. Nothing saved.");
