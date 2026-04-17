@@ -4,7 +4,7 @@ public class DatabaseConnection {
     // MySQL connection info for VCRTS database (Milestone 6)
     private static final String DB_URL = "jdbc:mysql://localhost:3306/vcrts_db";
     private static final String DB_USERNAME = "root";
-    private static final String DB_PASSWORD = "yourpassword";
+    private static final String DB_PASSWORD = "3426@Bronx";
 
     // Returns a live MySQL connection for DatabaseService to use.
     public static java.sql.Connection getConnection() throws java.sql.SQLException {
