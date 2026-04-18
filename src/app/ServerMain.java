@@ -20,14 +20,11 @@ public class ServerMain {//Philip
 
     public static void main(String[] args) {
 
-        CloudDataService service = new CloudDataService(
-            java.nio.file.Paths.get("vcrts_log.txt"),
-            java.nio.file.Paths.get("users.txt")
-        );
+        CloudDataService service = new CloudDataService(); //NO path needed anymore - DH
 
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {} //DH
 
         System.out.println("----------$$$ This is the VC Controller (Server) $$$--------");
         System.out.println("waiting for client to connect...");

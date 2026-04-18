@@ -39,7 +39,7 @@ public class DatabaseService {
     }
 
     // Look up a user's role
-    public String getUserRole(String username) throws SQLException {
+    public String getUserRole(String username) throws SQLException {//DH - This should stay
         String sql = "SELECT role FROM users WHERE username = ?";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -71,7 +71,7 @@ public class DatabaseService {
                    + "values (?, ?, ?, ?, ?, ?, ?)";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setInt(1, Integer.parseInt(job.getJobId()));
+                pstmt.setInt(1, Integer.parseInt(job.getJobId()));
             pstmt.setString(2, job.getDescription());
             pstmt.setInt(3, job.getDuration());
             pstmt.setTimestamp(4, job.getArrivalTime() == null ? null : Timestamp.valueOf(job.getArrivalTime()));
@@ -124,11 +124,122 @@ public class DatabaseService {
             if (ownerId == null || ownerId.isBlank()) {
                 pstmt.setNull(1, java.sql.Types.INTEGER);
             } else {
-                pstmt.setInt(1, Integer.parseInt(ownerId));
+                    pstmt.setInt(1, Integer.parseInt(ownerId));
             }
             pstmt.setString(2, vehicleInfo);
             pstmt.setInt(3, residencyHours);
             pstmt.executeUpdate();
         }
     }
+
+// --- NEW METHODS FOR FULL SQL MIGRATION --- DH 
+
+    public void insertLog(String message) throws SQLException {
+        String sql = "INSERT INTO logs (log_message, log_timestamp) VALUES (?, NOW())";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, message);
+            pstmt.executeUpdate();
+        }
+    }
+
+    public List<String> getAllLogs() throws SQLException {
+        String sql = "SELECT log_message FROM logs ORDER BY log_timestamp ASC";
+        List<String> logs = new ArrayList<>();
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql);
+             ResultSet rs = pstmt.executeQuery()) {
+            while (rs.next()) {
+                logs.add(rs.getString("log_message"));
+            }
+        }
+        return logs;
+    }
+
+    public void insertPendingRequest(String requestId, String entry, String submitter) throws SQLException {
+        String sql = "INSERT INTO admin_decisions (request_id, entry, submitter, decision, created_at) " +
+                     "VALUES (?, ?, ?, 'PENDING', NOW())";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, requestId);
+            pstmt.setString(2, entry);
+            pstmt.setString(3, submitter);
+            pstmt.executeUpdate();
+        }
+    }
+
+    public java.util.Map<String, String> getPendingRequest() throws SQLException {
+        String sql = "SELECT request_id, entry, submitter FROM admin_decisions WHERE decision = 'PENDING' ORDER BY created_at ASC LIMIT 1";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql);
+             ResultSet rs = pstmt.executeQuery()) {
+            if (rs.next()) {
+                java.util.Map<String, String> map = new java.util.LinkedHashMap<>();
+                map.put("REQUEST_ID", rs.getString("request_id"));
+                map.put("ENTRY", rs.getString("entry"));
+                map.put("SUBMITTER", rs.getString("submitter"));
+                return map;
+            }
+        }
+        return java.util.Collections.emptyMap();
+    }
+
+    public void updateAdminDecision(String requestId, String decision) throws SQLException {
+        String sql = "UPDATE admin_decisions SET decision = ? WHERE request_id = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, decision);
+            pstmt.setString(2, requestId);
+            pstmt.executeUpdate();
+        }
+    }
+
+    public String getAdminDecision(String requestId) throws SQLException {
+        String sql = "SELECT decision FROM admin_decisions WHERE request_id = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, requestId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getString("decision");
+                }
+            }
+        }
+        return null;
+    }
+
+    public void insertNotification(String username, String message) throws SQLException {
+        String sql = "INSERT INTO notifications (username, notification_message, notification_timestamp, status) VALUES (?, ?, NOW(), 'UNREAD')";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, username);
+            pstmt.setString(2, message);
+            pstmt.executeUpdate();
+        }
+    }
+
+    public List<String> getUnreadNotifications(String username) throws SQLException {
+        String sql = "SELECT notification_message FROM notifications WHERE username = ? AND status = 'UNREAD' ORDER BY notification_timestamp ASC";
+        List<String> notifs = new ArrayList<>();
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, username);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    notifs.add(rs.getString("notification_message"));
+                }
+            }
+        }
+        return notifs;
+    }
+
+    public void markNotificationsRead(String username) throws SQLException {
+        String sql = "UPDATE notifications SET status = 'READ' WHERE username = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, username);
+            pstmt.executeUpdate();
+        }
+    }
+
 }

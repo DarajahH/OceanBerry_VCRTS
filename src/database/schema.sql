@@ -57,3 +57,12 @@ CREATE TABLE IF NOT EXISTS admin_decisions (
     decision    ENUM('PENDING', 'ACCEPTED', 'REJECTED') DEFAULT 'PENDING',
     created_at  DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Update admin_decisions to use strings (UUIDs) and store the submitter username --DH
+ALTER TABLE admin_decisions DROP COLUMN user_id;
+ALTER TABLE admin_decisions MODIFY COLUMN request_id VARCHAR(50) NOT NULL;
+ALTER TABLE admin_decisions ADD COLUMN submitter VARCHAR(50);
+
+-- Update notifications to track which user the notification belongs to
+ALTER TABLE notifications ADD COLUMN username VARCHAR(50) NOT NULL;
+ALTER TABLE notifications ADD COLUMN status ENUM('UNREAD', 'READ') DEFAULT 'UNREAD';

@@ -34,7 +34,7 @@ public class VCRTSDashboard {
     private JTextArea adminRequestArea;
     private JLabel adminRequestStatusLabel;
     private Timer adminRefreshTimer;
-    private Timer notificationTimer;
+    //private Timer notificationTimer;
 
     public VCRTSDashboard(CloudDataService service, String currentUserRole) {
        this.service = service;
@@ -767,7 +767,7 @@ public class VCRTSDashboard {
                 JOptionPane.showMessageDialog(frame, scrollPane, "Completion Times", JOptionPane.INFORMATION_MESSAGE);
             }
             refreshMonitor(results.toString().trim());
-        } catch (Exception e) {
+        } catch (HeadlessException | IOException e) {
             JOptionPane.showMessageDialog(frame, "Error calculating completion times.");
         }
     }
