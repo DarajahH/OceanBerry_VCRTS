@@ -3,7 +3,7 @@ package app;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import services.CloudDataService;
-import views.LoginScreen;  
+import views.LoginScreen;
 
 
 

@@ -116,6 +116,23 @@ public class DatabaseService {
         return jobs;
     }
 
+    public List<java.util.Map<String, String>> getAllPendingRequests() throws SQLException {
+        String sql = "SELECT request_id, entry, submitter FROM admin_decisions WHERE decision = 'PENDING' ORDER BY created_at ASC";
+        List<java.util.Map<String, String>> list = new ArrayList<>();
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql);
+             ResultSet rs = pstmt.executeQuery()) {
+            while (rs.next()) {
+                java.util.Map<String, String> map = new java.util.LinkedHashMap<>();
+                map.put("REQUEST_ID", rs.getString("request_id"));
+                map.put("ENTRY", rs.getString("entry"));
+                map.put("SUBMITTER", rs.getString("submitter"));
+                list.add(map);
+            }
+        }
+        return list;
+    }
+
     // Insert a new vehicle submission into the vehicles table
     public void insertVehicle(String ownerId, String vehicleInfo, int residencyHours) throws SQLException {
         String sql = "INSERT INTO vehicles (owner_id, vehicle_info, residency_hours) VALUES (?, ?, ?)";

@@ -1,11 +1,12 @@
 package services;
 
+import database.DatabaseService;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import database.DatabaseService;
 import models.job.Job;
 
 public class CloudDataService {
@@ -15,6 +16,11 @@ public class CloudDataService {
 
     // No paths needed anymore! 
     public CloudDataService() { }
+
+    public synchronized List<Map<String, String>> readAllPendingRequests() throws IOException {
+        try { return db.getAllPendingRequests(); } 
+        catch (SQLException e) { throw new IOException("DB error: " + e.getMessage(), e); }
+    }
 
     public void appendLog(String entry) throws IOException {
         try { db.insertLog(entry); } 
@@ -131,5 +137,35 @@ public class CloudDataService {
         try { db.markNotificationsRead(username); } 
         catch (SQLException e) { throw new IOException("DB error: " + e.getMessage(), e); }
     }
+
+    public Map<String, String> parseLogEntry(String entry) {
+        Map<String, String> fields = new LinkedHashMap<>();
+        if (entry == null || entry.isBlank()) {
+            return fields;
+        }
+
+        String workingEntry = entry.trim();
+        if (workingEntry.startsWith("[")) {
+            int closingBracketIndex = workingEntry.indexOf(']');
+            if (closingBracketIndex >= 0) {
+                fields.put("TIMESTAMP", workingEntry.substring(1, closingBracketIndex));
+                workingEntry = workingEntry.substring(closingBracketIndex + 1).trim();
+            }
+        }
+
+        String[] tokens = workingEntry.split("\\s*\\|\\s*");
+        for (String token : tokens) {
+            int separatorIndex = token.indexOf(':');
+            if (separatorIndex <= 0) {
+                continue;
+            }
+            String key = token.substring(0, separatorIndex).trim();
+            String value = token.substring(separatorIndex + 1).trim();
+            fields.put(key, value);
+        }
+
+        return fields;
+    }
+    
 }
 
