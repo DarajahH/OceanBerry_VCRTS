@@ -3,12 +3,12 @@ package app;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
-import javax.swing.*;
-import services.CloudDataService;
-import models.job.Job;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
+import javax.swing.*;
+import models.job.Job;
+import services.CloudDataService;
 
 public class ServerMain {//Philip
 
@@ -88,7 +88,7 @@ public class ServerMain {//Philip
 
                     Job job = Job.createJob(id, info, duration, arrivalTime, deadlineTime);
                     service.appendJob(job);
-                } else if ("OWNER".equals(role)) {
+                } else if ("OWNER".equals(role)) {//shouldn't really exist anymore---- DH ---- Cliwnt should submit everything
                     String ownerId = parseField(entry, "ID");
                     String info = parseField(entry, "INFO");
                     int residency = Integer.parseInt(parseField(entry, "DURATION"));
