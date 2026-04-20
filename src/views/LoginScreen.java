@@ -1,6 +1,7 @@
 package views;
-
 import java.awt.*;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import javax.swing.*;
 import services.CloudDataService;
 
@@ -39,6 +40,9 @@ public class LoginScreen {
         gbc.gridy = 4; frame.add(passField, gbc);
         gbc.gridy = 5; frame.add(loginBtn, gbc);
         gbc.gridy = 6; frame.add(regBtn, gbc);
+        
+
+        frame.getRootPane().setDefaultButton(loginBtn);
 
       loginBtn.addActionListener(e -> {
             // USING INSTANCE METHOD
@@ -71,8 +75,11 @@ public class LoginScreen {
                 JOptionPane.showMessageDialog(frame, "Invalid Credentials");
             };
 
+            
 
         });
+
+  
 
         regBtn.addActionListener(e -> {
             String username = userField.getText().trim();
@@ -105,4 +112,15 @@ public class LoginScreen {
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
     }
+
+@Override
+public String toString() {
+    return "LoginScreen{" +
+            "service=" + service +
+            ", frame=" + frame +
+            '}';
 }
+
+
+}
+

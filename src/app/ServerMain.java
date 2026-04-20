@@ -3,12 +3,12 @@ package app;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
-import javax.swing.*;
-import services.CloudDataService;
-import models.job.Job;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
+import javax.swing.*;
+import models.job.Job;
+import services.CloudDataService;
 
 public class ServerMain {//Philip
 
@@ -20,14 +20,11 @@ public class ServerMain {//Philip
 
     public static void main(String[] args) {
 
-        CloudDataService service = new CloudDataService(
-            java.nio.file.Paths.get("vcrts_log.txt"),
-            java.nio.file.Paths.get("users.txt")
-        );
+        CloudDataService service = new CloudDataService(); //NO path needed anymore - DH
 
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {} //DH
 
         System.out.println("----------$$$ This is the VC Controller (Server) $$$--------");
         System.out.println("waiting for client to connect...");
@@ -77,7 +74,7 @@ public class ServerMain {//Philip
             boolean accepted = waitForAdminDecision(service, requestId);
 
             if (accepted) {
-                //  decide if we save a job ! ! ! ! ! ! ! ! ! !!! !! ! 
+                //  decide if we save a job ! ! ! ! ! ! ! ! ! !!! !! !
                 String role = parseField(entry, "ROLE");
                 if ("CLIENT".equals(role)) {
                     String id = parseField(entry, "ID");
@@ -91,11 +88,16 @@ public class ServerMain {//Philip
 
                     Job job = Job.createJob(id, info, duration, arrivalTime, deadlineTime);
                     service.appendJob(job);
+                } else if ("OWNER".equals(role)) {//shouldn't really exist anymore---- DH ---- Cliwnt should submit everything
+                    String ownerId = parseField(entry, "ID");
+                    String info = parseField(entry, "INFO");
+                    int residency = Integer.parseInt(parseField(entry, "DURATION"));
+                    service.appendVehicle(ownerId, info, residency);
                 }
 
                 service.appendLog(entry);
                 outputStream.writeUTF("ACCEPTED");
-                System.out.println("Request ACCEPTED. Data saved to file.");
+                System.out.println("Request ACCEPTED. Data saved to database.");
             } else {
                 outputStream.writeUTF("REJECTED");
                 System.out.println("Request REJECTED. Nothing saved.");
