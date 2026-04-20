@@ -616,11 +616,11 @@ public class VCRTSDashboard {
         JButton submitBtn = new JButton("Submit to VC");
         submitBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
         submitBtn.addActionListener(e -> {
-            if (ownerIdField.getText().isBlank() || vehicleIdField.getText().isBlank() || statusField.getText().isBlank() || availabilityField.getText().isBlank()) {
+            if (ownerIdField.getText().isBlank() || vehicleIdField.getText().isBlank() ||  availabilityField.getText().isBlank()) {
                 JOptionPane.showMessageDialog(frame, "Please complete all Vehicle Owner fields.");
                 return;
             }
-            String entry = String.format("[%s] ROLE:VEHICLE_OWNER | ID:%s | VEHICLE:%s | STATUS:%s | AVAILABILITY:%s",
+            String entry = String.format("[%s] ROLE:VEHICLE_OWNER | ID:%s | VEHICLE:%s | AVAILABILITY:%s",
                 dtf.format(LocalDateTime.now()),
                 ownerIdField.getText().trim(),
                 vehicleIdField.getText().trim(),
