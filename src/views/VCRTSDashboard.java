@@ -605,20 +605,13 @@ public class VCRTSDashboard {
 
         gbc.gridx = 0;
         gbc.gridy = 3;
-        panel.add(createWhiteLabel("Status Update:"), gbc);
-        JTextField statusField = new JTextField();
-        gbc.gridx = 1;
-        panel.add(statusField, gbc);
-
-        gbc.gridx = 0;
-        gbc.gridy = 4;
         panel.add(createWhiteLabel("Availability:"), gbc);
         JTextField availabilityField = new JTextField();
         gbc.gridx = 1;
         panel.add(availabilityField, gbc);
 
         gbc.gridx = 0;
-        gbc.gridy = 5;
+        gbc.gridy = 4;
         gbc.gridwidth = 2;
         JButton submitBtn = new JButton("Submit to VC");
         submitBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
@@ -631,7 +624,6 @@ public class VCRTSDashboard {
                 dtf.format(LocalDateTime.now()),
                 ownerIdField.getText().trim(),
                 vehicleIdField.getText().trim(),
-                statusField.getText().trim(),
                 availabilityField.getText().trim());
             try {
                 service.appendLog(entry);
