@@ -2,6 +2,8 @@ package views;
 
 import java.awt.*;
 import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.io.*;
 import java.net.Socket;
 import java.time.LocalDateTime;
@@ -10,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import javax.swing.table.TableColumn;
 import services.CloudDataService;
 import services.VCController;
 import services.VCController.JobCompletionRecord;
@@ -247,9 +250,27 @@ public class VCRTSDashboard {
         pendingRequestsTable.setBackground(Color.BLACK);
         pendingRequestsTable.setForeground(Color.GREEN);
         pendingRequestsTable.setGridColor(Color.DARK_GRAY);
+        pendingRequestsTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+        pendingRequestsTable.setRowHeight(22);
+        TableColumn col0 = pendingRequestsTable.getColumnModel().getColumn(0);
+        TableColumn col1 = pendingRequestsTable.getColumnModel().getColumn(1);
+        TableColumn col2 = pendingRequestsTable.getColumnModel().getColumn(2);
+        TableColumn col3 = pendingRequestsTable.getColumnModel().getColumn(3);
+        col0.setPreferredWidth(280);
+        col1.setPreferredWidth(120);
+        col2.setPreferredWidth(90);
+        col3.setPreferredWidth(520);
+        pendingRequestsTable.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 2) {
+                    showSelectedPendingRequestDetails();
+                }
+            }
+        });
 
         JScrollPane pendingScrollPane = new JScrollPane(pendingRequestsTable);
-        pendingScrollPane.setPreferredSize(new Dimension(500, 150));
+        pendingScrollPane.setPreferredSize(new Dimension(920, 260));
         adminPanel.add(pendingScrollPane, gbc);
 
         // Reset gbc for the buttons below
@@ -258,6 +279,20 @@ public class VCRTSDashboard {
 
         gbc.gridy = 3;
         gbc.gridwidth = 2;
+        JPanel adminActionRow = new JPanel(new FlowLayout(FlowLayout.CENTER, 12, 0));
+        adminActionRow.setBackground(new Color(30, 30, 35));
+        JButton refreshBtn = new JButton("Refresh");
+        refreshBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
+        refreshBtn.addActionListener(e -> refreshPendingAdminRequest());
+        JButton viewDetailsBtn = new JButton("View full details");
+        viewDetailsBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
+        viewDetailsBtn.addActionListener(e -> showSelectedPendingRequestDetails());
+        adminActionRow.add(refreshBtn);
+        adminActionRow.add(viewDetailsBtn);
+        adminPanel.add(adminActionRow, gbc);
+
+        gbc.gridy = 4;
+        gbc.gridwidth = 2;
         JButton btnCalcTimes = new JButton("Calculate Completion Times");
         btnCalcTimes.setFont(new Font("SansSerif", Font.BOLD, 14));
         btnCalcTimes.setBackground(new Color(70, 130, 180));
@@ -265,19 +300,19 @@ public class VCRTSDashboard {
         btnCalcTimes.addActionListener(e -> calculateCompletionTimes());
         adminPanel.add(btnCalcTimes, gbc);
 
-        gbc.gridy = 4;
+        gbc.gridy = 5;
         JButton acceptBtn = new JButton("Accept");
         acceptBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
         acceptBtn.addActionListener(e -> submitAdminDecision("ACCEPTED"));
         adminPanel.add(acceptBtn, gbc);
 
-        gbc.gridy = 5;
+        gbc.gridy = 6;
         JButton rejectBtn = new JButton("Reject");
         rejectBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
         rejectBtn.addActionListener(e -> submitAdminDecision("REJECTED"));
         adminPanel.add(rejectBtn, gbc);
 
-        gbc.gridy = 6;
+        gbc.gridy = 7;
         JButton backBtn = new JButton("Back to Home");
         backBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
         backBtn.addActionListener(e -> {
@@ -878,8 +913,30 @@ public class VCRTSDashboard {
         }
     }
 
+    private void showSelectedPendingRequestDetails() {
+        if (pendingRequestsModel == null || pendingRequestsTable == null) return;
+        int row = pendingRequestsTable.getSelectedRow();
+        if (row < 0) {
+            JOptionPane.showMessageDialog(frame, "Select a row in the table first.");
+            return;
+        }
+        String id = String.valueOf(pendingRequestsModel.getValueAt(row, 0));
+        String submitter = String.valueOf(pendingRequestsModel.getValueAt(row, 1));
+        String role = String.valueOf(pendingRequestsModel.getValueAt(row, 2));
+        String entry = String.valueOf(pendingRequestsModel.getValueAt(row, 3));
+        String full = "Request ID: " + id + "\nSubmitter: " + submitter + "\nRole: " + role + "\n\nFull entry:\n" + entry;
+        JTextArea area = new JTextArea(full);
+        area.setEditable(false);
+        area.setLineWrap(true);
+        area.setWrapStyleWord(true);
+        area.setFont(new Font("Monospaced", Font.PLAIN, 13));
+        JScrollPane sp = new JScrollPane(area);
+        sp.setPreferredSize(new Dimension(720, 480));
+        JOptionPane.showMessageDialog(frame, sp, "Request details", JOptionPane.INFORMATION_MESSAGE);
+    }
+
    private void refreshPendingAdminRequest() {
-        if (pendingRequestsModel == null || adminRequestStatusLabel == null) return;
+        if (pendingRequestsModel == null || pendingRequestsTable == null || adminRequestStatusLabel == null) return;
 
         try {
             List<Map<String, String>> requests = service.readAllPendingRequests();
