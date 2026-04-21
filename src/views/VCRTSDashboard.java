@@ -301,18 +301,12 @@ public class VCRTSDashboard {
         adminPanel.add(btnCalcTimes, gbc);
 
         gbc.gridy = 4;
-<<<<<<<<< Temporary merge branch 1
-        JButton acceptBtn = new JButton("Accept Job");
-=========
         JButton acceptBtn = new JButton("Accept");
         acceptBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
         acceptBtn.addActionListener(e -> submitAdminDecision("ACCEPTED"));
         adminPanel.add(acceptBtn, gbc);
 
         gbc.gridy = 5;
-<<<<<<<<< Temporary merge branch 1
-        JButton rejectBtn = new JButton("Reject Job");
-=========
         JButton rejectBtn = new JButton("Reject");
         rejectBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
         rejectBtn.addActionListener(e -> submitAdminDecision("REJECTED"));
