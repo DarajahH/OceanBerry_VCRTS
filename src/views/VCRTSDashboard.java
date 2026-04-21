@@ -2,6 +2,8 @@ package views;
 
 import java.awt.*;
 import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.io.*;
 import java.net.Socket;
 import java.time.LocalDateTime;
@@ -10,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import javax.swing.table.TableColumn;
 import services.CloudDataService;
 import services.VCController;
 import services.VCController.JobCompletionRecord;
@@ -247,9 +250,27 @@ public class VCRTSDashboard {
         pendingRequestsTable.setBackground(Color.BLACK);
         pendingRequestsTable.setForeground(Color.GREEN);
         pendingRequestsTable.setGridColor(Color.DARK_GRAY);
+        pendingRequestsTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+        pendingRequestsTable.setRowHeight(22);
+        TableColumn col0 = pendingRequestsTable.getColumnModel().getColumn(0);
+        TableColumn col1 = pendingRequestsTable.getColumnModel().getColumn(1);
+        TableColumn col2 = pendingRequestsTable.getColumnModel().getColumn(2);
+        TableColumn col3 = pendingRequestsTable.getColumnModel().getColumn(3);
+        col0.setPreferredWidth(280);
+        col1.setPreferredWidth(120);
+        col2.setPreferredWidth(90);
+        col3.setPreferredWidth(520);
+        pendingRequestsTable.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 2) {
+                    showSelectedPendingRequestDetails();
+                }
+            }
+        });
 
         JScrollPane pendingScrollPane = new JScrollPane(pendingRequestsTable);
-        pendingScrollPane.setPreferredSize(new Dimension(500, 150));
+        pendingScrollPane.setPreferredSize(new Dimension(920, 260));
         adminPanel.add(pendingScrollPane, gbc);
 
         // Reset gbc for the buttons below
@@ -257,6 +278,20 @@ public class VCRTSDashboard {
         gbc.weighty = 0;
 
         gbc.gridy = 3;
+        gbc.gridwidth = 2;
+        JPanel adminActionRow = new JPanel(new FlowLayout(FlowLayout.CENTER, 12, 0));
+        adminActionRow.setBackground(new Color(30, 30, 35));
+        JButton refreshBtn = new JButton("Refresh");
+        refreshBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
+        refreshBtn.addActionListener(e -> refreshPendingAdminRequest());
+        JButton viewDetailsBtn = new JButton("View full details");
+        viewDetailsBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
+        viewDetailsBtn.addActionListener(e -> showSelectedPendingRequestDetails());
+        adminActionRow.add(refreshBtn);
+        adminActionRow.add(viewDetailsBtn);
+        adminPanel.add(adminActionRow, gbc);
+
+        gbc.gridy = 4;
         gbc.gridwidth = 2;
         JButton btnCalcTimes = new JButton("Calculate Completion Times");
         btnCalcTimes.setFont(new Font("SansSerif", Font.BOLD, 14));
@@ -266,18 +301,24 @@ public class VCRTSDashboard {
         adminPanel.add(btnCalcTimes, gbc);
 
         gbc.gridy = 4;
+<<<<<<<<< Temporary merge branch 1
+        JButton acceptBtn = new JButton("Accept Job");
+=========
         JButton acceptBtn = new JButton("Accept");
         acceptBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
         acceptBtn.addActionListener(e -> submitAdminDecision("ACCEPTED"));
         adminPanel.add(acceptBtn, gbc);
 
         gbc.gridy = 5;
+<<<<<<<<< Temporary merge branch 1
+        JButton rejectBtn = new JButton("Reject Job");
+=========
         JButton rejectBtn = new JButton("Reject");
         rejectBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
         rejectBtn.addActionListener(e -> submitAdminDecision("REJECTED"));
         adminPanel.add(rejectBtn, gbc);
 
-        gbc.gridy = 6;
+        gbc.gridy = 7;
         JButton backBtn = new JButton("Back to Home");
         backBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
         backBtn.addActionListener(e -> {
@@ -870,8 +911,49 @@ public class VCRTSDashboard {
         }
     }
 
+<<<<<<<<< Temporary merge branch 1
+    private void refreshPendingAdminRequest() {
+        if (adminRequestArea == null || adminRequestStatusLabel == null) {
+            return;
+        }
+
+        try {
+            Map<String, String> pendingRequest = service.readPendingRequest();
+            String entry = pendingRequest.get("ENTRY");
+
+            if (entry == null || entry.isBlank()) {
+                adminRequestStatusLabel.setText("Waiting for client request...");
+                adminRequestArea.setText("No pending client request.");
+                return;
+            }
+
+            adminRequestStatusLabel.setText("Pending client request");
+            adminRequestArea.setText(entry);
+            adminRequestArea.setCaretPosition(0);
+        } catch (IOException e) {
+            adminRequestStatusLabel.setText("Unable to load pending request");
+            adminRequestArea.setText("Error reading pending request.");
+        }
+    }
+
+    private void submitAdminDecision(String decision) {
+        try {
+            Map<String, String> pendingRequest = service.readPendingRequest();
+            String requestId = pendingRequest.get("REQUEST_ID");
+            String entry = pendingRequest.get("ENTRY");
+
+            if (requestId == null || requestId.isBlank() || entry == null || entry.isBlank()) {
+                JOptionPane.showMessageDialog(frame, "No pending client request.");
+                return;
+            }
+
+            service.writeAdminDecision(requestId, decision);
+            adminRequestStatusLabel.setText("Last response sent: " + decision);
+            adminRequestArea.setText(entry + "\n\nDecision sent: " + decision);
+            refreshMonitor("Admin decision sent for request:\n" + entry + "\nSTATUS: " + decision);
+=========
    private void refreshPendingAdminRequest() {
-        if (pendingRequestsModel == null || adminRequestStatusLabel == null) return;
+        if (pendingRequestsModel == null || pendingRequestsTable == null || adminRequestStatusLabel == null) return;
 
         try {
             List<Map<String, String>> requests = service.readAllPendingRequests();
