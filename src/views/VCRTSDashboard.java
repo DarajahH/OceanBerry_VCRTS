@@ -300,13 +300,13 @@ public class VCRTSDashboard {
         btnCalcTimes.addActionListener(e -> calculateCompletionTimes());
         adminPanel.add(btnCalcTimes, gbc);
 
-        gbc.gridy = 4;
+        gbc.gridy = 5;
         JButton acceptBtn = new JButton("Accept");
         acceptBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
         acceptBtn.addActionListener(e -> submitAdminDecision("ACCEPTED"));
         adminPanel.add(acceptBtn, gbc);
 
-        gbc.gridy = 5;
+        gbc.gridy = 6;
         JButton rejectBtn = new JButton("Reject");
         rejectBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
         rejectBtn.addActionListener(e -> submitAdminDecision("REJECTED"));
@@ -640,25 +640,33 @@ public class VCRTSDashboard {
 
         gbc.gridx = 0;
         gbc.gridy = 3;
+        panel.add(createWhiteLabel("Status Update:"), gbc);
+        JTextField statusField = new JTextField();
+        gbc.gridx = 1;
+        panel.add(statusField, gbc);
+
+        gbc.gridx = 0;
+        gbc.gridy = 4;
         panel.add(createWhiteLabel("Availability:"), gbc);
         JTextField availabilityField = new JTextField();
         gbc.gridx = 1;
         panel.add(availabilityField, gbc);
 
         gbc.gridx = 0;
-        gbc.gridy = 4;
+        gbc.gridy = 5;
         gbc.gridwidth = 2;
         JButton submitBtn = new JButton("Submit to VC");
         submitBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
         submitBtn.addActionListener(e -> {
-            if (ownerIdField.getText().isBlank() || vehicleIdField.getText().isBlank() ||  availabilityField.getText().isBlank()) {
+            if (ownerIdField.getText().isBlank() || vehicleIdField.getText().isBlank() || statusField.getText().isBlank() || availabilityField.getText().isBlank()) {
                 JOptionPane.showMessageDialog(frame, "Please complete all Vehicle Owner fields.");
                 return;
             }
-            String entry = String.format("[%s] ROLE:VEHICLE_OWNER | ID:%s | VEHICLE:%s | AVAILABILITY:%s",
+            String entry = String.format("[%s] ROLE:VEHICLE_OWNER | ID:%s | VEHICLE:%s | STATUS:%s | AVAILABILITY:%s",
                 dtf.format(LocalDateTime.now()),
                 ownerIdField.getText().trim(),
                 vehicleIdField.getText().trim(),
+                statusField.getText().trim(),
                 availabilityField.getText().trim());
             try {
                 service.appendLog(entry);
@@ -905,47 +913,28 @@ public class VCRTSDashboard {
         }
     }
 
-<<<<<<<<< Temporary merge branch 1
-    private void refreshPendingAdminRequest() {
-        if (adminRequestArea == null || adminRequestStatusLabel == null) {
+    private void showSelectedPendingRequestDetails() {
+        if (pendingRequestsModel == null || pendingRequestsTable == null) return;
+        int row = pendingRequestsTable.getSelectedRow();
+        if (row < 0) {
+            JOptionPane.showMessageDialog(frame, "Select a row in the table first.");
             return;
         }
-
-        try {
-            Map<String, String> pendingRequest = service.readPendingRequest();
-            String entry = pendingRequest.get("ENTRY");
-
-            if (entry == null || entry.isBlank()) {
-                adminRequestStatusLabel.setText("Waiting for client request...");
-                adminRequestArea.setText("No pending client request.");
-                return;
-            }
-
-            adminRequestStatusLabel.setText("Pending client request");
-            adminRequestArea.setText(entry);
-            adminRequestArea.setCaretPosition(0);
-        } catch (IOException e) {
-            adminRequestStatusLabel.setText("Unable to load pending request");
-            adminRequestArea.setText("Error reading pending request.");
-        }
+        String id = String.valueOf(pendingRequestsModel.getValueAt(row, 0));
+        String submitter = String.valueOf(pendingRequestsModel.getValueAt(row, 1));
+        String role = String.valueOf(pendingRequestsModel.getValueAt(row, 2));
+        String entry = String.valueOf(pendingRequestsModel.getValueAt(row, 3));
+        String full = "Request ID: " + id + "\nSubmitter: " + submitter + "\nRole: " + role + "\n\nFull entry:\n" + entry;
+        JTextArea area = new JTextArea(full);
+        area.setEditable(false);
+        area.setLineWrap(true);
+        area.setWrapStyleWord(true);
+        area.setFont(new Font("Monospaced", Font.PLAIN, 13));
+        JScrollPane sp = new JScrollPane(area);
+        sp.setPreferredSize(new Dimension(720, 480));
+        JOptionPane.showMessageDialog(frame, sp, "Request details", JOptionPane.INFORMATION_MESSAGE);
     }
 
-    private void submitAdminDecision(String decision) {
-        try {
-            Map<String, String> pendingRequest = service.readPendingRequest();
-            String requestId = pendingRequest.get("REQUEST_ID");
-            String entry = pendingRequest.get("ENTRY");
-
-            if (requestId == null || requestId.isBlank() || entry == null || entry.isBlank()) {
-                JOptionPane.showMessageDialog(frame, "No pending client request.");
-                return;
-            }
-
-            service.writeAdminDecision(requestId, decision);
-            adminRequestStatusLabel.setText("Last response sent: " + decision);
-            adminRequestArea.setText(entry + "\n\nDecision sent: " + decision);
-            refreshMonitor("Admin decision sent for request:\n" + entry + "\nSTATUS: " + decision);
-=========
    private void refreshPendingAdminRequest() {
         if (pendingRequestsModel == null || pendingRequestsTable == null || adminRequestStatusLabel == null) return;
 
