@@ -91,9 +91,13 @@ public class CloudDataService {
         catch (SQLException e) { throw new IOException("DB error: " + e.getMessage(), e); }
     }
 
-    public void appendVehicle(String ownerId, String vehicleInfo, int residencyHours) throws IOException {
-        try { db.insertVehicle(ownerId, vehicleInfo, residencyHours); } 
-        catch (SQLException e) { throw new IOException("DB error: " + e.getMessage(), e); }
+    public void appendVehicle(String ownerId, String vehicleInfo, int residencyHours, String status, String availability) throws IOException {
+        try { 
+            db.insertVehicle(ownerId, vehicleInfo, residencyHours, status, availability); 
+        } 
+        catch (SQLException e) { 
+            throw new IOException("DB error: " + e.getMessage(), e); 
+        }
     }
 
     public synchronized void writePendingRequest(String requestId, String entry, String submitter) throws IOException {

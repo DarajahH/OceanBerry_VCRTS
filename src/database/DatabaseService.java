@@ -4,6 +4,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -12,6 +13,57 @@ import models.enums.JobStatus;
 import models.job.Job;
 
 public class DatabaseService {
+
+    private void ensureWorkflowTables(Connection conn) throws SQLException {
+        try (Statement stmt = conn.createStatement()) {
+            stmt.executeUpdate(
+                "CREATE TABLE IF NOT EXISTS logs ("
+                    + "log_id INT PRIMARY KEY AUTO_INCREMENT, "
+                    + "log_message VARCHAR(255) NOT NULL, "
+                    + "log_timestamp DATETIME NOT NULL)"
+            );
+
+            stmt.executeUpdate(
+                "CREATE TABLE IF NOT EXISTS notifications ("
+                    + "notification_id INT PRIMARY KEY AUTO_INCREMENT, "
+                    + "notification_message VARCHAR(255) NOT NULL, "
+                    + "notification_timestamp DATETIME NOT NULL)"
+            );
+            try {
+                stmt.executeUpdate("ALTER TABLE notifications ADD COLUMN username VARCHAR(50) NOT NULL DEFAULT ''");
+            } catch (SQLException ignored) {}
+            try {
+                stmt.executeUpdate("ALTER TABLE notifications ADD COLUMN status ENUM('UNREAD', 'READ') DEFAULT 'UNREAD'");
+            } catch (SQLException ignored) {}
+
+            stmt.executeUpdate(
+                "CREATE TABLE IF NOT EXISTS admin_decisions ("
+                    + "request_id VARCHAR(50) PRIMARY KEY, "
+                    + "entry TEXT NOT NULL, "
+                    + "submitter VARCHAR(50), "
+                    + "decision ENUM('PENDING', 'ACCEPTED', 'REJECTED') DEFAULT 'PENDING', "
+                    + "created_at DATETIME DEFAULT CURRENT_TIMESTAMP)"
+            );
+            try {
+                stmt.executeUpdate("ALTER TABLE admin_decisions DROP COLUMN user_id");
+            } catch (SQLException ignored) {}
+            try {
+                stmt.executeUpdate("ALTER TABLE admin_decisions MODIFY COLUMN request_id VARCHAR(50) NOT NULL");
+            } catch (SQLException ignored) {}
+            try {
+                stmt.executeUpdate("ALTER TABLE admin_decisions ADD COLUMN submitter VARCHAR(50)");
+            } catch (SQLException ignored) {}
+            try {
+                stmt.executeUpdate(
+                    "ALTER TABLE admin_decisions ADD COLUMN decision "
+                        + "ENUM('PENDING', 'ACCEPTED', 'REJECTED') DEFAULT 'PENDING'"
+                );
+            } catch (SQLException ignored) {}
+            try {
+                stmt.executeUpdate("ALTER TABLE admin_decisions ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP");
+            } catch (SQLException ignored) {}
+        }
+    }
 
     // Register a new user in the users table
     public void registerUser(String username, String password, String role) throws SQLException {
@@ -131,32 +183,46 @@ public class DatabaseService {
     public List<java.util.Map<String, String>> getAllPendingRequests() throws SQLException {
         String sql = "SELECT request_id, entry, submitter FROM admin_decisions WHERE decision = 'PENDING' ORDER BY created_at ASC";
         List<java.util.Map<String, String>> list = new ArrayList<>();
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql);
-             ResultSet rs = pstmt.executeQuery()) {
-            while (rs.next()) {
-                java.util.Map<String, String> map = new java.util.LinkedHashMap<>();
-                map.put("REQUEST_ID", rs.getString("request_id"));
-                map.put("ENTRY", rs.getString("entry"));
-                map.put("SUBMITTER", rs.getString("submitter"));
-                list.add(map);
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            ensureWorkflowTables(conn);
+            try (PreparedStatement pstmt = conn.prepareStatement(sql);
+                 ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    java.util.Map<String, String> map = new java.util.LinkedHashMap<>();
+                    map.put("REQUEST_ID", rs.getString("request_id"));
+                    map.put("ENTRY", rs.getString("entry"));
+                    map.put("SUBMITTER", rs.getString("submitter"));
+                    list.add(map);
+                }
             }
         }
         return list;
     }
 
     // Insert a new vehicle submission into the vehicles table
-    public void insertVehicle(String ownerId, String vehicleInfo, int residencyHours) throws SQLException {
-        String sql = "INSERT INTO vehicles (owner_id, vehicle_info, residency_hours) VALUES (?, ?, ?)";
+    public void insertVehicle(String ownerId, String vehicleInfo, int residencyHours, String status, String availability) throws SQLException {
+        String sql = "INSERT INTO vehicles (owner_id, vehicle_info, residency_hours, vehicle_status, vehicle_availability) "
+                   + "VALUES (?, ?, ?, ?, ?)";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             if (ownerId == null || ownerId.isBlank()) {
                 pstmt.setNull(1, java.sql.Types.INTEGER);
             } else {
-                    pstmt.setInt(1, Integer.parseInt(ownerId));
+                pstmt.setInt(1, Integer.parseInt(ownerId));
             }
             pstmt.setString(2, vehicleInfo);
             pstmt.setInt(3, residencyHours);
+            pstmt.setString(4, status);
+
+            if ("true".equalsIgnoreCase(availability)
+                    || "yes".equalsIgnoreCase(availability)
+                    || "available".equalsIgnoreCase(availability)
+                    || "1".equals(availability)) {
+                pstmt.setBoolean(5, true);
+            } else {
+                pstmt.setBoolean(5, false);
+            }
+
             pstmt.executeUpdate();
         }
     }
@@ -165,21 +231,25 @@ public class DatabaseService {
 
     public void insertLog(String message) throws SQLException {
         String sql = "INSERT INTO logs (log_message, log_timestamp) VALUES (?, NOW())";
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            ensureWorkflowTables(conn);
+            try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, message);
             pstmt.executeUpdate();
+            }
         }
     }
 
     public List<String> getAllLogs() throws SQLException {
         String sql = "SELECT log_message FROM logs ORDER BY log_timestamp ASC";
         List<String> logs = new ArrayList<>();
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql);
-             ResultSet rs = pstmt.executeQuery()) {
-            while (rs.next()) {
-                logs.add(rs.getString("log_message"));
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            ensureWorkflowTables(conn);
+            try (PreparedStatement pstmt = conn.prepareStatement(sql);
+                 ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    logs.add(rs.getString("log_message"));
+                }
             }
         }
         return logs;
@@ -188,26 +258,30 @@ public class DatabaseService {
     public void insertPendingRequest(String requestId, String entry, String submitter) throws SQLException {
         String sql = "INSERT INTO admin_decisions (request_id, entry, submitter, decision, created_at) " +
                      "VALUES (?, ?, ?, 'PENDING', NOW())";
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            ensureWorkflowTables(conn);
+            try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, requestId);
             pstmt.setString(2, entry);
             pstmt.setString(3, submitter);
             pstmt.executeUpdate();
+            }
         }
     }
 
     public java.util.Map<String, String> getPendingRequest() throws SQLException {
         String sql = "SELECT request_id, entry, submitter FROM admin_decisions WHERE decision = 'PENDING' ORDER BY created_at ASC LIMIT 1";
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql);
-             ResultSet rs = pstmt.executeQuery()) {
-            if (rs.next()) {
-                java.util.Map<String, String> map = new java.util.LinkedHashMap<>();
-                map.put("REQUEST_ID", rs.getString("request_id"));
-                map.put("ENTRY", rs.getString("entry"));
-                map.put("SUBMITTER", rs.getString("submitter"));
-                return map;
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            ensureWorkflowTables(conn);
+            try (PreparedStatement pstmt = conn.prepareStatement(sql);
+                 ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    java.util.Map<String, String> map = new java.util.LinkedHashMap<>();
+                    map.put("REQUEST_ID", rs.getString("request_id"));
+                    map.put("ENTRY", rs.getString("entry"));
+                    map.put("SUBMITTER", rs.getString("submitter"));
+                    return map;
+                }
             }
         }
         return java.util.Collections.emptyMap();
@@ -215,22 +289,26 @@ public class DatabaseService {
 
     public void updateAdminDecision(String requestId, String decision) throws SQLException {
         String sql = "UPDATE admin_decisions SET decision = ? WHERE request_id = ?";
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            ensureWorkflowTables(conn);
+            try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, decision);
             pstmt.setString(2, requestId);
             pstmt.executeUpdate();
+            }
         }
     }
 
     public String getAdminDecision(String requestId) throws SQLException {
         String sql = "SELECT decision FROM admin_decisions WHERE request_id = ?";
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setString(1, requestId);
-            try (ResultSet rs = pstmt.executeQuery()) {
-                if (rs.next()) {
-                    return rs.getString("decision");
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            ensureWorkflowTables(conn);
+            try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                pstmt.setString(1, requestId);
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    if (rs.next()) {
+                        return rs.getString("decision");
+                    }
                 }
             }
         }
@@ -239,23 +317,27 @@ public class DatabaseService {
 
     public void insertNotification(String username, String message) throws SQLException {
         String sql = "INSERT INTO notifications (username, notification_message, notification_timestamp, status) VALUES (?, ?, NOW(), 'UNREAD')";
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            ensureWorkflowTables(conn);
+            try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, username);
             pstmt.setString(2, message);
             pstmt.executeUpdate();
+            }
         }
     }
 
     public List<String> getUnreadNotifications(String username) throws SQLException {
         String sql = "SELECT notification_message FROM notifications WHERE username = ? AND status = 'UNREAD' ORDER BY notification_timestamp ASC";
         List<String> notifs = new ArrayList<>();
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setString(1, username);
-            try (ResultSet rs = pstmt.executeQuery()) {
-                while (rs.next()) {
-                    notifs.add(rs.getString("notification_message"));
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            ensureWorkflowTables(conn);
+            try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                pstmt.setString(1, username);
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    while (rs.next()) {
+                        notifs.add(rs.getString("notification_message"));
+                    }
                 }
             }
         }
@@ -264,10 +346,12 @@ public class DatabaseService {
 
     public void markNotificationsRead(String username) throws SQLException {
         String sql = "UPDATE notifications SET status = 'READ' WHERE username = ?";
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setString(1, username);
-            pstmt.executeUpdate();
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            ensureWorkflowTables(conn);
+            try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                pstmt.setString(1, username);
+                pstmt.executeUpdate();
+            }
         }
     }
 

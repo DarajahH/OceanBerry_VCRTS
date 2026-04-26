@@ -74,7 +74,7 @@ public class ServerMain {//Philip
             boolean accepted = waitForAdminDecision(service, requestId);
 
             if (accepted) {
-                //  decide if we save a job ! ! ! ! ! ! ! ! ! !!! !! !
+                // Save accepted requests to the matching table.
                 String role = parseField(entry, "ROLE");
                 if ("CLIENT".equals(role)) {
                     String id = parseField(entry, "ID");
@@ -88,11 +88,13 @@ public class ServerMain {//Philip
 
                     Job job = Job.createJob(id, info, duration, arrivalTime, deadlineTime);
                     service.appendJob(job);
-                } else if ("OWNER".equals(role)) {//shouldn't really exist anymore---- DH ---- Cliwnt should submit everything
+                } else if ("VEHICLE_OWNER".equals(role)) {
                     String ownerId = parseField(entry, "ID");
-                    String info = parseField(entry, "INFO");
-                    int residency = Integer.parseInt(parseField(entry, "DURATION"));
-                    service.appendVehicle(ownerId, info, residency);
+                    String vehicleInfo = parseField(entry, "INFO");
+                    int residencyHours = Integer.parseInt(parseField(entry, "RESIDENCY"));
+                    String status = parseField(entry, "STATUS");
+                    String availability = parseField(entry, "AVAILABILITY");
+                    service.appendVehicle(ownerId, vehicleInfo, residencyHours, status, availability);
                 }
 
                 service.appendLog(entry);
