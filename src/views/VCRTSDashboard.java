@@ -8,11 +8,15 @@ import java.io.*;
 import java.net.Socket;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.TableColumn;
+import javax.swing.table.DefaultTableModel;
+import models.job.Job;
 import services.CloudDataService;
 import services.VCController;
 import services.VCController.JobCompletionRecord;
@@ -34,6 +38,11 @@ public class VCRTSDashboard {
     private JTextField idField, infoField, durField, deadlineField;
     private JLabel idLabel, infoLabel, durLabel, deadlineLabel;
     private JTextArea monitorArea;
+    private JTable ownerVehicleTable;
+    private DefaultTableModel ownerVehicleModel;
+    private JTable clientJobTable;
+    private DefaultTableModel clientJobModel;
+    private JTextArea clientActivityArea;
     private JTable pendingRequestsTable;
     private javax.swing.table.DefaultTableModel pendingRequestsModel;
     private JLabel adminRequestStatusLabel;
@@ -69,10 +78,10 @@ public class VCRTSDashboard {
         leftCardContainer.add(createVehicleOwnerScreen(service), "VEHICLE_OWNER_SCREEN");
         leftCardContainer.setBackground(new Color(30, 30, 35));
 
-        // 4. Layout: split with monitor for owner/admin, content-only for client
-        if (canViewVcrtsLogs()) {
-            JPanel rightMonitorPanel = createMonitorPanel();
-            JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, leftCardContainer, rightMonitorPanel);
+        // 4. Layout: split the secondary panel for roles that need it
+        if (hasRightSidePanel()) {
+            JComponent rightSidePanel = createRightSidePanel();
+            JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, leftCardContainer, rightSidePanel);
             splitPane.setDividerLocation(400);
             splitPane.setDividerSize(2);
             splitPane.setBorder(null);
@@ -83,7 +92,7 @@ public class VCRTSDashboard {
 
         // Initialize state:
         adjustFields();
-        if (canViewVcrtsLogs()) {
+        if (hasRightSidePanel()) {
             refreshMonitor(null);
         }
 
@@ -148,30 +157,38 @@ public class VCRTSDashboard {
             gbc.gridy = nextRow++;
             panel.add(btnCalcTimes, gbc);
         }
-      if (isClientUser()) {
-            JButton btnOpenForm = new JButton("Open Client Portal");
+
+        if (isClientUser()) {
+            JButton btnOpenForm = new JButton("Submit New Transaction");
             btnOpenForm.setFont(new Font("SansSerif", Font.BOLD, 14));
-            
-            // UPDATE THIS LINE to call the new panel:
             btnOpenForm.addActionListener(e -> showScreen(createCombinedClientPanel(service)));
-            
             gbc.gridy = nextRow++;
             gbc.insets = new Insets(20, 0, 10, 0);
             panel.add(btnOpenForm, gbc);
         }
 
-        if (isOwnerUser()) {//DH
+        JButton btnResidencyView = new JButton("View Residency Time");
+        btnResidencyView.setFont(new Font("SansSerif", Font.BOLD, 14));
+        btnResidencyView.addActionListener(e -> showResidencyTimeOverview());
+        gbc.gridy = nextRow++;
+        gbc.insets = new Insets(10, 0, 10, 0);
+        panel.add(btnResidencyView, gbc);
+
+        if (isClientUser()) {//DH
             JButton taskOwnerBtn = new JButton("Task Owner Portal");
             taskOwnerBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
             taskOwnerBtn.addActionListener(e -> showScreen(createTaskOwnerScreen(service)));
             gbc.gridy = nextRow++;
             gbc.insets = new Insets(10, 0, 10, 0);
             panel.add(taskOwnerBtn, gbc);
+        }
 
+        if (isOwnerUser()) {//DH
             JButton vehicleOwnerBtn = new JButton("Vehicle Owner Portal");
             vehicleOwnerBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
             vehicleOwnerBtn.addActionListener(e -> showScreen(createVehicleOwnerScreen(service)));
             gbc.gridy = nextRow++;
+            gbc.insets = new Insets(10, 0, 10, 0);
             panel.add(vehicleOwnerBtn, gbc);
         }
 
@@ -599,8 +616,8 @@ public class VCRTSDashboard {
     public void showScreen(JPanel contentPanel) {//DH
         frame.getContentPane().removeAll();
         frame.add(createHeader(), BorderLayout.NORTH);
-        if (canViewVcrtsLogs()) {
-            JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, contentPanel, createMonitorPanel());
+        if (hasRightSidePanel()) {
+            JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, contentPanel, createRightSidePanel());
             splitPane.setDividerLocation(400);
             splitPane.setDividerSize(2);
             splitPane.setBorder(null);
@@ -634,66 +651,106 @@ public class VCRTSDashboard {
         gbc.gridy = 1;
         panel.add(createWhiteLabel("Task Owner ID:"), gbc);
         JTextField ownerIdField = new JTextField();
+        ownerIdField.setText(service.getCurrentUsername() == null ? "" : service.getCurrentUsername());
+        ownerIdField.setEditable(false);
         gbc.gridx = 1;
         panel.add(ownerIdField, gbc);
 
         gbc.gridx = 0;
         gbc.gridy = 2;
-        panel.add(createWhiteLabel("Task Description:"), gbc);
-        JTextField taskField = new JTextField();
+        panel.add(createWhiteLabel("Task ID (Job ID):"), gbc);
+        JTextField taskIdField = new JTextField();
         gbc.gridx = 1;
-        panel.add(taskField, gbc);
+        panel.add(taskIdField, gbc);
 
         gbc.gridx = 0;
         gbc.gridy = 3;
+        panel.add(createWhiteLabel("Description:"), gbc);
+        JTextArea taskField = new JTextArea(4, 20);
+        taskField.setLineWrap(true);
+        taskField.setWrapStyleWord(true);
+        JScrollPane taskScroll = new JScrollPane(taskField);
+        gbc.gridx = 1;
+        panel.add(taskScroll, gbc);
+
+        gbc.gridx = 0;
+        gbc.gridy = 4;
+        panel.add(createWhiteLabel("Duration (hours):"), gbc);
+        Integer[] durationOptions = new Integer[24];
+        for (int i = 0; i < durationOptions.length; i++) {
+            durationOptions[i] = i + 1;
+        }
+        JComboBox<Integer> durationField = new JComboBox<>(durationOptions);
+        durationField.setSelectedItem(1);
+        gbc.gridx = 1;
+        panel.add(durationField, gbc);
+
+        gbc.gridx = 0;
+        gbc.gridy = 5;
         panel.add(createWhiteLabel("Target Vehicle ID:"), gbc);
-        JTextField vehicleField = new JTextField();
+        JComboBox<VehicleChoice> vehicleField = new JComboBox<>(loadVehicleChoices(service));
         gbc.gridx = 1;
         panel.add(vehicleField, gbc);
 
         gbc.gridx = 0;
-        gbc.gridy = 4;
+        gbc.gridy = 6;
         panel.add(createWhiteLabel("Deadline (YYYY/MM/DD HH:MM:SS):"), gbc);
         JTextField taskDeadlineField = new JTextField();
         gbc.gridx = 1;
         panel.add(taskDeadlineField, gbc);
 
         gbc.gridx = 0;
-        gbc.gridy = 5;
+        gbc.gridy = 7;
         gbc.gridwidth = 2;
         JButton submitBtn = new JButton("Submit to VC");
         submitBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
         submitBtn.addActionListener(e -> {
-            if (ownerIdField.getText().isBlank() || taskField.getText().isBlank()
-                    || vehicleField.getText().isBlank()
+            VehicleChoice selectedVehicle = (VehicleChoice) vehicleField.getSelectedItem();
+            Integer selectedDuration = (Integer) durationField.getSelectedItem();
+            if (ownerIdField.getText().isBlank() || taskIdField.getText().isBlank() || taskField.getText().trim().isBlank()
+                    || selectedDuration == null
+                    || selectedVehicle == null || selectedVehicle.getVehicleId().isBlank()
                     || taskDeadlineField.getText().isBlank()) {
                 JOptionPane.showMessageDialog(frame, "Please complete all Task Owner fields.");
                 return;
             }
             String deadlineText = taskDeadlineField.getText().trim();
+            LocalDateTime deadlineTime;
             try {
-                LocalDateTime.parse(deadlineText, dtf);
+                deadlineTime = LocalDateTime.parse(deadlineText, dtf);
             } catch (java.time.format.DateTimeParseException ex) {
                 JOptionPane.showMessageDialog(frame, "Deadline must use format YYYY/MM/DD HH:MM:SS.");
                 return;
             }
-            String entry = String.format("[%s] ROLE:TASK_OWNER | ID:%s | INFO:%s | VEHICLE:%s | DEADLINE:%s | DURATION:0",
+            String entry = String.format("[%s] ROLE:TASK_OWNER | ID:%s | TASK_ID:%s | DESCRIPTION:%s | DURATION:%d | VEHICLE:%s | DEADLINE:%s",
                 dtf.format(LocalDateTime.now()),
                 ownerIdField.getText().trim(),
+                taskIdField.getText().trim(),
                 taskField.getText().trim(),
-                vehicleField.getText().trim(),
+                selectedDuration,
+                selectedVehicle.getVehicleId(),
                 deadlineText);
             try {
-                service.appendLog(entry);
+                Job job = Job.createJob(
+                    taskIdField.getText().trim(),
+                    taskField.getText().trim(),
+                    selectedDuration,
+                    LocalDateTime.now(),
+                    deadlineTime,
+                    selectedVehicle.getVehicleId()
+                );
+                service.appendJobAndLog(job, entry);
                 refreshMonitor("Task Owner submitted to VC:\n" + entry);
             } catch (IOException ex) {
-                ex.printStackTrace();
+                JOptionPane.showMessageDialog(frame, "Unable to submit Task Owner request.");
+            } catch (IllegalArgumentException ex) {
+                JOptionPane.showMessageDialog(frame, ex.getMessage());
             }
             sendToVCController(entry, ownerIdField.getText().trim());
         });
         panel.add(submitBtn, gbc);
 
-        gbc.gridy = 7;
+        gbc.gridy = 8;
         panel.add(createBackToHomeButton(service), gbc);
         return panel;
     }
@@ -720,6 +777,8 @@ public class VCRTSDashboard {
         gbc.gridy = 1;
         panel.add(createWhiteLabel("Owner ID:"), gbc);
         JTextField ownerIdField = new JTextField();
+        ownerIdField.setText(service.getCurrentUsername() == null ? "" : service.getCurrentUsername());
+        ownerIdField.setEditable(false);
         gbc.gridx = 1;
         panel.add(ownerIdField, gbc);
 
@@ -733,16 +792,14 @@ public class VCRTSDashboard {
         gbc.gridx = 0;
         gbc.gridy = 3;
         panel.add(createWhiteLabel("Status Update:"), gbc);
-        String[] statusOptions = {"IDLE", "IN_PROGRESS", "MAINTENANCE"};
-        JComboBox<String> statusBox = new JComboBox<>(statusOptions);
+        JComboBox<String> statusField = new JComboBox<>(new String[] {"Usable", "In Use", "Maintenance"});
         gbc.gridx = 1;
         panel.add(statusBox, gbc);
 
         gbc.gridx = 0;
         gbc.gridy = 4;
         panel.add(createWhiteLabel("Availability:"), gbc);
-        String[] availabilityOptions = {"AVAILABLE", "UNAVAILABLE"};
-        JComboBox<String> availabilityBox = new JComboBox<>(availabilityOptions);
+        JComboBox<String> availabilityField = new JComboBox<>(new String[] {"open", "closed"});
         gbc.gridx = 1;
         panel.add(availabilityBox, gbc);
 
@@ -752,8 +809,7 @@ public class VCRTSDashboard {
         JButton submitBtn = new JButton("Submit to VC");
         submitBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
         submitBtn.addActionListener(e -> {
-            if (ownerIdField.getText().isBlank() || vehicleIdField.getText().isBlank() || 
-                statusBox.getSelectedItem() == null || availabilityBox.getSelectedItem() == null) {
+            if (ownerIdField.getText().isBlank() || vehicleIdField.getText().isBlank()) {
                 JOptionPane.showMessageDialog(frame, "Please complete all Vehicle Owner fields.");
                 return;
             }
@@ -761,8 +817,8 @@ public class VCRTSDashboard {
                 dtf.format(LocalDateTime.now()),
                 ownerIdField.getText().trim(),
                 vehicleIdField.getText().trim(),
-                (String) statusBox.getSelectedItem(),
-                (String) availabilityBox.getSelectedItem());
+                String.valueOf(statusField.getSelectedItem()),
+                String.valueOf(availabilityField.getSelectedItem()));
             try {
                 service.appendLog(entry);
                 refreshMonitor("Vehicle Owner update submitted to VC:\n" + entry);
@@ -819,6 +875,220 @@ public class VCRTSDashboard {
         JLabel label = new JLabel(text);
         label.setForeground(Color.WHITE);
         return label;
+    }
+
+    private VehicleChoice[] loadVehicleChoices(CloudDataService service) {
+        try {
+            List<Map<String, String>> vehicles = service.readAllVehicles();
+            List<VehicleChoice> choices = new ArrayList<>();
+            for (Map<String, String> vehicle : vehicles) {
+                String vehicleId = safeValue(vehicle.get("VEHICLE_ID"));
+                if (vehicleId.isBlank()) {
+                    continue;
+                }
+
+                String vehicleInfo = safeValue(vehicle.get("VEHICLE_INFO"));
+                String label = "Vehicle " + vehicleId;
+                if (!vehicleInfo.isBlank() && !"N/A".equals(vehicleInfo)) {
+                    label += " - " + vehicleInfo;
+                }
+                choices.add(new VehicleChoice(vehicleId, label));
+            }
+
+            if (choices.isEmpty()) {
+                choices.add(new VehicleChoice("", "No vehicles available"));
+            }
+            return choices.toArray(new VehicleChoice[0]);
+        } catch (IOException e) {
+            return new VehicleChoice[] { new VehicleChoice("", "No vehicles available") };
+        }
+    }
+
+    private void showResidencyTimeOverview() {
+        try {
+            if (isAdminUser()) {
+                showAdminResidencyOverview();
+                return;
+            }
+
+            String currentUsername = service.getCurrentUsername();
+            if (currentUsername == null || currentUsername.isBlank()) {
+                JOptionPane.showMessageDialog(frame, "No active user session found.");
+                return;
+            }
+
+            if (isClientUser()) {
+                showClientResidencyOverview(currentUsername);
+                return;
+            }
+
+            if (isOwnerUser()) {
+                showOwnerResidencyOverview(currentUsername);
+                return;
+            }
+
+            JOptionPane.showMessageDialog(frame, "No residency view available for this role.");
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(frame, "Unable to load residency time overview.");
+        }
+    }
+
+    private void showAdminResidencyOverview() throws IOException {
+        List<JobCompletionRecord> records = controller.calculateCompletionTimes();
+        if (records.isEmpty()) {
+            JOptionPane.showMessageDialog(frame, "No client jobs found.");
+            return;
+        }
+
+        String[] columns = {"Job ID", "Description", "Residency Time (hrs)", "Deadline", "Completion Time"};
+        List<Object[]> rows = new ArrayList<>();
+        for (JobCompletionRecord record : records) {
+            rows.add(new Object[] {
+                record.getJobId(),
+                record.getInfo(),
+                record.getResidencyTimeHours(),
+                record.getDeadline(),
+                record.getCompletionTime()
+            });
+        }
+        showResidencyDialog("Residency Time Overview", columns, rows);
+    }
+
+    private void showClientResidencyOverview(String currentUsername) throws IOException {
+        List<Object[]> rows = new ArrayList<>();
+        for (Map<String, String> record : service.readClientJobRecords()) {
+            if (!currentUsername.equals(record.get("ID"))) {
+                continue;
+            }
+            rows.add(new Object[] {
+                safeValue(record.get("ID")),
+                safeValue(record.get("INFO")),
+                safeValue(record.get("DURATION")),
+                safeValue(record.get("DEADLINE")),
+                safeValue(record.get("STATUS"))
+            });
+        }
+
+        if (rows.isEmpty()) {
+            JOptionPane.showMessageDialog(frame, "No residency records found for your account.");
+            return;
+        }
+
+        showResidencyDialog(
+            "My Residency Time",
+            new String[] {"Job ID", "Description", "Residency Time (hrs)", "Deadline", "Status"},
+            rows
+        );
+    }
+
+    private void showOwnerResidencyOverview(String currentUsername) throws IOException {
+        List<Object[]> rows = new ArrayList<>();
+        for (String line : service.readAllLogs()) {
+            Map<String, String> record = service.parseLogEntry(line);
+            String role = normalizeRole(record.get("ROLE"));
+            if (!"VEHICLE_OWNER".equals(role)) {
+                continue;
+            }
+            if (!currentUsername.equals(record.get("ID"))) {
+                continue;
+            }
+
+            rows.add(new Object[] {
+                safeValue(record.get("VEHICLE")),
+                residencyValue(record),
+                safeValue(record.get("DEADLINE")),
+                safeValue(record.get("STATUS"))
+            });
+        }
+
+        if (rows.isEmpty()) {
+            JOptionPane.showMessageDialog(frame, "No vehicle residency records found for your account.");
+            return;
+        }
+
+        showResidencyDialog(
+            "My Vehicle Residency",
+            new String[] {"Vehicle", "Residency Time (hrs)", "Deadline", "Status"},
+            rows
+        );
+    }
+
+    private void showResidencyDialog(String title, String[] columns, List<Object[]> rows) {
+        JTable table = new JTable(new javax.swing.table.DefaultTableModel(rows.toArray(new Object[0][]), columns) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        });
+        table.setFillsViewportHeight(true);
+        table.setRowHeight(26);
+        table.setAutoCreateRowSorter(true);
+
+        JScrollPane scrollPane = new JScrollPane(table);
+        scrollPane.setPreferredSize(new Dimension(900, 320));
+
+        JOptionPane.showMessageDialog(frame, scrollPane, title, JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    private String safeValue(String value) {
+        return value == null || value.isBlank() ? "N/A" : value;
+    }
+
+    private String residencyValue(Map<String, String> record) {
+        String value = record.get("DURATION");
+        if (value == null || value.isBlank()) {
+            value = record.get("DUR");
+        }
+        return safeValue(value);
+    }
+
+    private String normalizeRole(String role) {
+        if (role == null) {
+            return "";
+        }
+        return role.trim().replace(' ', '_').toUpperCase();
+    }
+
+    private static final class VehicleChoice {
+        private final String vehicleId;
+        private final String label;
+
+        private VehicleChoice(String vehicleId, String label) {
+            this.vehicleId = vehicleId;
+            this.label = label;
+        }
+
+        private String getVehicleId() {
+            return vehicleId;
+        }
+
+        @Override
+        public String toString() {
+            return label;
+        }
+    }
+
+    private static final class VehicleSnapshot {
+        private final String vehicleId;
+        private String status = "N/A";
+        private String availability = "N/A";
+        private int updateCount = 0;
+        private String lastTimestamp = "N/A";
+
+        private VehicleSnapshot(String vehicleId) {
+            this.vehicleId = vehicleId;
+        }
+
+        private void update(Map<String, String> record) {
+            updateCount++;
+            status = safeValueStatic(record.get("STATUS"));
+            availability = safeValueStatic(record.get("AVAILABILITY"));
+            lastTimestamp = safeValueStatic(record.get("TIMESTAMP"));
+        }
+
+        private static String safeValueStatic(String value) {
+            return value == null || value.isBlank() ? "N/A" : value;
+        }
     }
 
     private void adjustFields() {
@@ -1007,6 +1277,10 @@ public class VCRTSDashboard {
         return "CLIENT".equals(currentUserRole);
     }
 
+    private boolean hasRightSidePanel() {
+        return isOwnerUser() || isClientUser() || isAdminUser();
+    }
+
     private boolean canViewVcrtsLogs() {
         return isOwnerUser() || isAdminUser();
     }
@@ -1025,7 +1299,235 @@ public class VCRTSDashboard {
 
             monitorArea.setText(display.toString());
             monitorArea.setCaretPosition(monitorArea.getDocument().getLength()); // Auto-scroll to bottom
+            refreshOwnerVehiclePanel();
+            refreshClientJobsPanel();
+            refreshClientActivityPanel();
         } catch (IOException ignored) {}
+    }
+
+    private JComponent createRightSidePanel() {
+        if (isClientUser()) {
+            JPanel clientPanel = createClientJobsPanel();
+            JPanel activityPanel = createClientActivityPanel();
+            refreshClientJobsPanel();
+            refreshClientActivityPanel();
+            JSplitPane splitPane = new JSplitPane(
+                JSplitPane.VERTICAL_SPLIT,
+                clientPanel,
+                activityPanel
+            );
+            splitPane.setDividerLocation(220);
+            splitPane.setDividerSize(2);
+            splitPane.setBorder(null);
+            return splitPane;
+        }
+
+        if (!isOwnerUser()) {
+            return createMonitorPanel();
+        }
+
+        JPanel ownerPanel = createOwnerVehiclePanel();
+        refreshOwnerVehiclePanel();
+        JSplitPane splitPane = new JSplitPane(
+            JSplitPane.VERTICAL_SPLIT,
+            ownerPanel,
+            createMonitorPanel()
+        );
+        splitPane.setDividerLocation(220);
+        splitPane.setDividerSize(2);
+        splitPane.setBorder(null);
+        return splitPane;
+    }
+
+    private JPanel createOwnerVehiclePanel() {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setBackground(new Color(30, 30, 35));
+        panel.setBorder(new EmptyBorder(10, 10, 10, 10));
+
+        String[] columns = {"Vehicle", "Activity", "Availability", "Updates", "Last Update"};
+        ownerVehicleModel = new DefaultTableModel(columns, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+        ownerVehicleTable = new JTable(ownerVehicleModel);
+        ownerVehicleTable.setFillsViewportHeight(true);
+        ownerVehicleTable.setRowHeight(26);
+        ownerVehicleTable.setAutoCreateRowSorter(true);
+
+        JScrollPane scrollPane = new JScrollPane(ownerVehicleTable);
+        scrollPane.setBorder(BorderFactory.createTitledBorder(
+            BorderFactory.createLineBorder(Color.DARK_GRAY),
+            "Vehicle Panel",
+            0, 0, null, Color.CYAN));
+
+        panel.add(scrollPane, BorderLayout.CENTER);
+        return panel;
+    }
+
+    private JPanel createClientJobsPanel() {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setBackground(new Color(30, 30, 35));
+        panel.setBorder(new EmptyBorder(10, 10, 10, 10));
+
+        String[] columns = {"Job ID", "Description", "Duration", "Deadline", "Status"};
+        clientJobModel = new DefaultTableModel(columns, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+        clientJobTable = new JTable(clientJobModel);
+        clientJobTable.setFillsViewportHeight(true);
+        clientJobTable.setRowHeight(26);
+        clientJobTable.setAutoCreateRowSorter(true);
+
+        JScrollPane scrollPane = new JScrollPane(clientJobTable);
+        scrollPane.setBorder(BorderFactory.createTitledBorder(
+            BorderFactory.createLineBorder(Color.DARK_GRAY),
+            "My Jobs",
+            0, 0, null, Color.CYAN));
+
+        panel.add(scrollPane, BorderLayout.CENTER);
+        return panel;
+    }
+
+    private JPanel createClientActivityPanel() {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setBackground(new Color(30, 30, 35));
+        panel.setBorder(new EmptyBorder(10, 10, 10, 10));
+
+        clientActivityArea = new JTextArea();
+        clientActivityArea.setEditable(false);
+        clientActivityArea.setBackground(Color.BLACK);
+        clientActivityArea.setForeground(Color.GREEN);
+        clientActivityArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
+
+        JScrollPane scrollPane = new JScrollPane(clientActivityArea);
+        scrollPane.setBorder(BorderFactory.createTitledBorder(
+            BorderFactory.createLineBorder(Color.DARK_GRAY),
+            "My Activity",
+            0, 0, null, Color.CYAN));
+
+        panel.add(scrollPane, BorderLayout.CENTER);
+        return panel;
+    }
+
+    private void refreshOwnerVehiclePanel() {
+        if (ownerVehicleModel == null || !isOwnerUser()) {
+            return;
+        }
+
+        try {
+            String currentUsername = service.getCurrentUsername();
+            if (currentUsername == null || currentUsername.isBlank()) {
+                ownerVehicleModel.setRowCount(0);
+                return;
+            }
+
+            Map<String, VehicleSnapshot> vehicles = new LinkedHashMap<>();
+            for (String line : service.readAllLogs()) {
+                Map<String, String> record = service.parseLogEntry(line);
+                if (!"VEHICLE_OWNER".equals(normalizeRole(record.get("ROLE")))) {
+                    continue;
+                }
+                if (!currentUsername.equals(record.get("ID"))) {
+                    continue;
+                }
+
+                String vehicleId = safeValue(record.get("VEHICLE"));
+                VehicleSnapshot snapshot = vehicles.get(vehicleId);
+                if (snapshot == null) {
+                    snapshot = new VehicleSnapshot(vehicleId);
+                    vehicles.put(vehicleId, snapshot);
+                }
+                snapshot.update(record);
+            }
+
+            ownerVehicleModel.setRowCount(0);
+            for (VehicleSnapshot vehicle : vehicles.values()) {
+                ownerVehicleModel.addRow(new Object[] {
+                    vehicle.vehicleId,
+                    vehicle.status,
+                    vehicle.availability,
+                    vehicle.updateCount,
+                    vehicle.lastTimestamp
+                });
+            }
+        } catch (IOException ignored) {
+            if (ownerVehicleModel != null) {
+                ownerVehicleModel.setRowCount(0);
+            }
+        }
+    }
+
+    private void refreshClientJobsPanel() {
+        if (clientJobModel == null || !isClientUser()) {
+            return;
+        }
+
+        try {
+            String currentUsername = service.getCurrentUsername();
+            if (currentUsername == null || currentUsername.isBlank()) {
+                clientJobModel.setRowCount(0);
+                return;
+            }
+
+            clientJobModel.setRowCount(0);
+            for (Map<String, String> record : service.readClientJobRecords()) {
+                if (!currentUsername.equals(record.get("ID"))) {
+                    continue;
+                }
+                clientJobModel.addRow(new Object[] {
+                    safeValue(record.get("ID")),
+                    safeValue(record.get("INFO")),
+                    safeValue(record.get("DURATION")),
+                    safeValue(record.get("DEADLINE")),
+                    safeValue(record.get("STATUS"))
+                });
+            }
+        } catch (IOException ignored) {
+            if (clientJobModel != null) {
+                clientJobModel.setRowCount(0);
+            }
+        }
+    }
+
+    private void refreshClientActivityPanel() {
+        if (clientActivityArea == null || !isClientUser()) {
+            return;
+        }
+
+        try {
+            String currentUsername = service.getCurrentUsername();
+            if (currentUsername == null || currentUsername.isBlank()) {
+                clientActivityArea.setText("No active client session.");
+                return;
+            }
+
+            StringBuilder display = new StringBuilder();
+            for (String line : service.readAllLogs()) {
+                Map<String, String> record = service.parseLogEntry(line);
+                if (!"CLIENT".equals(normalizeRole(record.get("ROLE")))) {
+                    continue;
+                }
+                if (!currentUsername.equals(record.get("ID"))) {
+                    continue;
+                }
+                display.append(line).append("\n");
+            }
+
+            if (display.length() == 0) {
+                clientActivityArea.setText("No recent activity found.");
+                return;
+            }
+
+            clientActivityArea.setText(display.toString().trim());
+            clientActivityArea.setCaretPosition(clientActivityArea.getDocument().getLength());
+        } catch (IOException ignored) {
+            clientActivityArea.setText("Unable to load client activity.");
+        }
     }
 
     private void startAdminRefreshTimer() {

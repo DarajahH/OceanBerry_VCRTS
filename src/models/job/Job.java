@@ -13,6 +13,7 @@ public class Job {
     private final int duration;
     private final LocalDateTime arrivalTime;
     private final LocalDateTime deadline;
+    private final String vehicleId;
     private JobStatus status;
     private Integer completionTime;
 
@@ -25,11 +26,25 @@ public class Job {
         JobStatus status,
         Integer completionTime
     ) {
+        this(jobId, description, duration, arrivalTime, deadline, status, completionTime, null);
+    }
+
+    public Job(
+        String jobId,
+        String description,
+        int duration,
+        LocalDateTime arrivalTime,
+        LocalDateTime deadline,
+        JobStatus status,
+        Integer completionTime,
+        String vehicleId
+    ) {
         this.jobId = jobId;
         this.description = description;
         this.duration = duration;
         this.arrivalTime = arrivalTime;
         this.deadline = deadline;
+        this.vehicleId = vehicleId;
         this.status = status;
         this.completionTime = completionTime;
     }
@@ -52,7 +67,34 @@ public class Job {
             arrivalTime,
             deadline,
             JobStatus.QUEUED,
+            null,
             null
+        );
+        jobIdSet.add(jobId);
+        return createdJob;
+    }
+
+    public static Job createJob(
+        String jobId,
+        String description,
+        int duration,
+        LocalDateTime arrivalTime,
+        LocalDateTime deadline,
+        String vehicleId
+    ) {
+        if (jobIdSet.contains(jobId)) {
+            throw new IllegalArgumentException("Job Id invalid because it already exists.");
+        }
+
+        Job createdJob = new Job(
+            jobId,
+            description,
+            duration,
+            arrivalTime,
+            deadline,
+            JobStatus.QUEUED,
+            null,
+            vehicleId
         );
         jobIdSet.add(jobId);
         return createdJob;
@@ -82,6 +124,10 @@ public class Job {
 
     public LocalDateTime getDeadline() {
         return deadline;
+    }
+
+    public String getVehicleId() {
+        return vehicleId;
     }
 
     public JobStatus getStatus() {

@@ -131,8 +131,8 @@ public class DatabaseService {
 
     // Insert a new job record into jobs table
     public void insertJob(Job job) throws SQLException {
-        String sql = "insert into jobs (job_id, description, duration_hours, arrival_time, deadline_time, jobStatus, completionTime) "
-                   + "values (?, ?, ?, ?, ?, ?, ?)";
+        String sql = "insert into jobs (job_id, description, duration_hours, arrival_time, deadline_time, jobStatus, completionTime, vehicle_id) "
+                   + "values (?, ?, ?, ?, ?, ?, ?, ?)";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
                 pstmt.setInt(1, Integer.parseInt(job.getJobId()));
@@ -146,13 +146,18 @@ public class DatabaseService {
             } else {
                 pstmt.setInt(7, job.getCompletionTime());
             }
+            if (job.getVehicleId() == null || job.getVehicleId().isBlank()) {
+                pstmt.setNull(8, java.sql.Types.INTEGER);
+            } else {
+                pstmt.setInt(8, Integer.parseInt(job.getVehicleId()));
+            }
             pstmt.executeUpdate();
         }
     }
 
     // Read all jobs from the jobs table returning them as Job objects so we can aggregate data nicely
     public List<Job> getAllJobs() throws SQLException {
-        String sql = "SELECT job_id, description, duration_hours, arrival_time, deadline_time, jobStatus, completionTime FROM jobs";
+        String sql = "SELECT job_id, description, duration_hours, arrival_time, deadline_time, jobStatus, completionTime, vehicle_id FROM jobs";
         List<Job> jobs = new ArrayList<>();
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql);
@@ -166,18 +171,40 @@ public class DatabaseService {
                 String statusStr = rs.getString("jobStatus");
                 int completion = rs.getInt("completionTime");
                 boolean completionWasNull = rs.wasNull();
+                int vehicleId = rs.getInt("vehicle_id");
+                boolean vehicleWasNull = rs.wasNull();
 
                 LocalDateTime arrivalTime = arrivalTs == null ? null : arrivalTs.toLocalDateTime();
                 LocalDateTime deadline = deadlineTs == null ? null : deadlineTs.toLocalDateTime();
                 JobStatus status = (statusStr == null || statusStr.isBlank())
                     ? JobStatus.QUEUED : JobStatus.valueOf(statusStr);
                 Integer completionTime = completionWasNull ? null : completion;
+                String vehicleIdValue = vehicleWasNull ? null : String.valueOf(vehicleId);
 
                 Job.registerExistingJobId(jobId);
-                jobs.add(new Job(jobId, description, duration, arrivalTime, deadline, status, completionTime));
+                jobs.add(new Job(jobId, description, duration, arrivalTime, deadline, status, completionTime, vehicleIdValue));
             }
         }
         return jobs;
+    }
+
+    public List<java.util.Map<String, String>> getAllVehicles() throws SQLException {
+        String sql = "SELECT vehicle_id, vehicle_info, residency_hours, vehicle_status, vehicle_availability FROM vehicles ORDER BY vehicle_id ASC";
+        List<java.util.Map<String, String>> vehicles = new ArrayList<>();
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql);
+             ResultSet rs = pstmt.executeQuery()) {
+            while (rs.next()) {
+                java.util.Map<String, String> record = new java.util.LinkedHashMap<>();
+                record.put("VEHICLE_ID", String.valueOf(rs.getInt("vehicle_id")));
+                record.put("VEHICLE_INFO", rs.getString("vehicle_info"));
+                record.put("RESIDENCY_HOURS", String.valueOf(rs.getInt("residency_hours")));
+                record.put("STATUS", rs.getString("vehicle_status"));
+                record.put("AVAILABILITY", String.valueOf(rs.getBoolean("vehicle_availability")));
+                vehicles.add(record);
+            }
+        }
+        return vehicles;
     }
 
     public List<java.util.Map<String, String>> getAllPendingRequests() throws SQLException {
@@ -313,6 +340,22 @@ public class DatabaseService {
             }
         }
         return null;
+    }
+
+    public void clearPendingRequest() throws SQLException {
+        String sql = "DELETE FROM admin_decisions WHERE decision = 'PENDING'";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.executeUpdate();
+        }
+    }
+
+    public void clearAdminDecision() throws SQLException {
+        String sql = "DELETE FROM admin_decisions WHERE decision <> 'PENDING'";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.executeUpdate();
+        }
     }
 
     public void insertNotification(String username, String message) throws SQLException {

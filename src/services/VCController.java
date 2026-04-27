@@ -104,6 +104,26 @@ public class VCController {
                 completionTime
             );
         }
+
+        public String getJobId() {
+            return jobId;
+        }
+
+        public String getInfo() {
+            return info;
+        }
+
+        public int getResidencyTimeHours() {
+            return duration;
+        }
+
+        public String getDeadline() {
+            return deadline;
+        }
+
+        public int getCompletionTime() {
+            return completionTime;
+        }
     }
 
     private String formatDeadline(Job job) {
