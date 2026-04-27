@@ -495,12 +495,11 @@ public class VCRTSDashboard {
 
         gbc.gridx = 0;
         gbc.gridy = 4;
-        JCheckBox availabilityBox = new JCheckBox("Vehicle is available");
-        availabilityBox.setBackground(new Color(30, 30, 35));
-        availabilityBox.setForeground(Color.WHITE);
-        availabilityBox.setSelected(true);
-    gbc.gridx = 1;
-    panel.add(availabilityBox, gbc);
+        panel.add(createWhiteLabel("Availability:"), gbc);
+        String[] availOptions = {"YES", "NO"};
+        JComboBox<String> availabilityBox = new JComboBox<>(availOptions);
+        gbc.gridx = 1;
+        panel.add(availabilityBox, gbc);
 
 
         gbc.gridx = 0;
@@ -513,7 +512,7 @@ public class VCRTSDashboard {
             String vehicleInfo = vehicleInfoField.getText().trim();
             String residency = residencyField.getText().trim();
             String status = (String) statusBox.getSelectedItem();
-            boolean isAvailable = availabilityBox.isSelected();
+            String isAvailable = (String) availabilityBox.getSelectedItem();
 
         if (ownerId.isEmpty() || vehicleInfo.isEmpty() || residency.isEmpty()
                 || status.isEmpty()) {
@@ -568,7 +567,7 @@ public class VCRTSDashboard {
             vehicleInfoField.setText("");
             residencyField.setText("");
             statusBox.setSelectedIndex(0);
-            availabilityBox.setSelected(true);
+            availabilityBox.setSelectedIndex(0);
 
             new Thread(() -> {
                 try {
@@ -678,7 +677,7 @@ public class VCRTSDashboard {
                 JOptionPane.showMessageDialog(frame, "Deadline must use format YYYY/MM/DD HH:MM:SS.");
                 return;
             }
-            String entry = String.format("[%s] ROLE:TASK_OWNER | ID:%s | TASK:%s | VEHICLE:%s | DEADLINE:%s",
+            String entry = String.format("[%s] ROLE:TASK_OWNER | ID:%s | INFO:%s | VEHICLE:%s | DEADLINE:%s | DURATION:0",
                 dtf.format(LocalDateTime.now()),
                 ownerIdField.getText().trim(),
                 taskField.getText().trim(),
@@ -687,10 +686,10 @@ public class VCRTSDashboard {
             try {
                 service.appendLog(entry);
                 refreshMonitor("Task Owner submitted to VC:\n" + entry);
-                JOptionPane.showMessageDialog(frame, "Task Owner request submitted.");
             } catch (IOException ex) {
-                JOptionPane.showMessageDialog(frame, "Unable to submit Task Owner request.");
+                ex.printStackTrace();
             }
+            sendToVCController(entry, ownerIdField.getText().trim());
         });
         panel.add(submitBtn, gbc);
 
@@ -734,16 +733,18 @@ public class VCRTSDashboard {
         gbc.gridx = 0;
         gbc.gridy = 3;
         panel.add(createWhiteLabel("Status Update:"), gbc);
-        JTextField statusField = new JTextField();
+        String[] statusOptions = {"IDLE", "IN_PROGRESS", "MAINTENANCE"};
+        JComboBox<String> statusBox = new JComboBox<>(statusOptions);
         gbc.gridx = 1;
-        panel.add(statusField, gbc);
+        panel.add(statusBox, gbc);
 
         gbc.gridx = 0;
         gbc.gridy = 4;
         panel.add(createWhiteLabel("Availability:"), gbc);
-        JTextField availabilityField = new JTextField();
+        String[] availabilityOptions = {"AVAILABLE", "UNAVAILABLE"};
+        JComboBox<String> availabilityBox = new JComboBox<>(availabilityOptions);
         gbc.gridx = 1;
-        panel.add(availabilityField, gbc);
+        panel.add(availabilityBox, gbc);
 
         gbc.gridx = 0;
         gbc.gridy = 5;
@@ -751,7 +752,8 @@ public class VCRTSDashboard {
         JButton submitBtn = new JButton("Submit to VC");
         submitBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
         submitBtn.addActionListener(e -> {
-            if (ownerIdField.getText().isBlank() || vehicleIdField.getText().isBlank() || statusField.getText().isBlank() || availabilityField.getText().isBlank()) {
+            if (ownerIdField.getText().isBlank() || vehicleIdField.getText().isBlank() || 
+                statusBox.getSelectedItem() == null || availabilityBox.getSelectedItem() == null) {
                 JOptionPane.showMessageDialog(frame, "Please complete all Vehicle Owner fields.");
                 return;
             }
@@ -759,15 +761,15 @@ public class VCRTSDashboard {
                 dtf.format(LocalDateTime.now()),
                 ownerIdField.getText().trim(),
                 vehicleIdField.getText().trim(),
-                statusField.getText().trim(),
-                availabilityField.getText().trim());
+                (String) statusBox.getSelectedItem(),
+                (String) availabilityBox.getSelectedItem());
             try {
                 service.appendLog(entry);
                 refreshMonitor("Vehicle Owner update submitted to VC:\n" + entry);
-                JOptionPane.showMessageDialog(frame, "Vehicle Owner submission sent.");
             } catch (IOException ex) {
-                JOptionPane.showMessageDialog(frame, "Unable to submit Vehicle Owner update.");
+                System.err.println("Local log failed, but attempting server send: " + ex.getMessage());
             }
+            sendToVCController(entry, ownerIdField.getText().trim());
         });
         panel.add(submitBtn, gbc);
 
@@ -955,6 +957,39 @@ public class VCRTSDashboard {
             refreshMonitor(results.toString().trim());
         } catch (HeadlessException | IOException e) {
             JOptionPane.showMessageDialog(frame, "Error calculating completion times.");
+        }
+    }
+
+    private void sendToVCController(String entry, String id) {
+        try {
+            refreshMonitor("Connecting to VC Controller server...");
+            Socket socket = new Socket("localhost", 9806);
+            DataOutputStream outputStream = new DataOutputStream(socket.getOutputStream());
+            DataInputStream inputStream = new DataInputStream(socket.getInputStream());
+
+            // Send data and username
+            outputStream.writeUTF(entry);
+            outputStream.writeUTF(service.getCurrentUsername() != null ? service.getCurrentUsername() : id);
+
+            // Wait for ACK
+            String ack = inputStream.readUTF();
+            refreshMonitor("Server response: " + ack + " - Pending approval...");
+
+            JOptionPane.showMessageDialog(frame,
+                "Submission sent! Pending admin approval.\nYou will be notified of the decision.",
+                "Success", JOptionPane.INFORMATION_MESSAGE);
+
+            // Background thread to wait for final decision (ACCEPTED/REJECTED)
+            new Thread(() -> {
+                try {
+                    String finalDecision = inputStream.readUTF();
+                    refreshMonitor("Final Admin Decision: " + finalDecision);
+                    socket.close();
+                } catch (IOException ignored) {}
+            }).start();
+
+        } catch (IOException ex) {
+            JOptionPane.showMessageDialog(frame, "Server Error: Make sure ServerMain is running.");
         }
     }
 

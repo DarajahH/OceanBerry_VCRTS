@@ -52,11 +52,8 @@ public class ServerMain {//Philip
 
     private static void handleClient(Socket socket, CloudDataService service) {
 
-        try {
-            // Read message (from client)
-            inputStream = new DataInputStream(socket.getInputStream());
-            outputStream = new DataOutputStream(socket.getOutputStream());
-
+        try (DataInputStream inputStream = new DataInputStream(socket.getInputStream());
+            DataOutputStream outputStream = new DataOutputStream(socket.getOutputStream())) {
             // Read the submission entry and submitter username from client
             String entry = inputStream.readUTF();
             String submitter = inputStream.readUTF();
@@ -76,7 +73,7 @@ public class ServerMain {//Philip
             if (accepted) {
                 // Save accepted requests to the matching table.
                 String role = parseField(entry, "ROLE");
-                if ("CLIENT".equals(role)) {
+                if ("CLIENT".equals(role) || "TASK_OWNER".equals(role)) {
                     String id = parseField(entry, "ID");
                     String info = parseField(entry, "INFO");
                     int duration = Integer.parseInt(parseField(entry, "DURATION"));
