@@ -2,8 +2,6 @@ package views;
 
 import java.awt.*;
 import java.awt.event.KeyEvent;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.io.*;
 import java.net.Socket;
 import java.time.LocalDateTime;
@@ -12,7 +10,6 @@ import java.util.List;
 import java.util.Map;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-import javax.swing.table.TableColumn;
 import services.CloudDataService;
 import services.VCController;
 import services.VCController.JobCompletionRecord;
@@ -34,11 +31,10 @@ public class VCRTSDashboard {
     private JTextField idField, infoField, durField, deadlineField;
     private JLabel idLabel, infoLabel, durLabel, deadlineLabel;
     private JTextArea monitorArea;
-    private JTable pendingRequestsTable;
-    private javax.swing.table.DefaultTableModel pendingRequestsModel;
+    private JTextArea adminRequestArea;
     private JLabel adminRequestStatusLabel;
     private Timer adminRefreshTimer;
-    //private Timer notificationTimer;
+    private Timer notificationTimer;
 
     public VCRTSDashboard(CloudDataService service, String currentUserRole) {
        this.service = service;
@@ -61,7 +57,7 @@ public class VCRTSDashboard {
         
         // Home panel is the default view, form panel is for submissions, and we can add more as needed
         leftCardContainer.add(createHomePanel(service), "HOME_SCREEN");
-        leftCardContainer.add(createCombinedClientPanel(service), "FORM_SCREEN");
+        leftCardContainer.add(createSubmissionPanel(), "FORM_SCREEN");
         if (isAdminUser()) {//Only an admin may open this panel
             leftCardContainer.add(createAdminScreen(service), "ADMIN_SCREEN");
         }
@@ -148,13 +144,10 @@ public class VCRTSDashboard {
             gbc.gridy = nextRow++;
             panel.add(btnCalcTimes, gbc);
         }
-      if (isClientUser()) {
-            JButton btnOpenForm = new JButton("Open Client Portal");
+        if (isClientUser()) {
+            JButton btnOpenForm = new JButton("Submit New Transaction");
             btnOpenForm.setFont(new Font("SansSerif", Font.BOLD, 14));
-            
-            // UPDATE THIS LINE to call the new panel:
-            btnOpenForm.addActionListener(e -> showScreen(createCombinedClientPanel(service)));
-            
+            btnOpenForm.addActionListener(e -> showScreen(createSubmissionPanel()));
             gbc.gridy = nextRow++;
             gbc.insets = new Insets(20, 0, 10, 0);
             panel.add(btnOpenForm, gbc);
@@ -234,64 +227,18 @@ public class VCRTSDashboard {
         adminRequestStatusLabel.setHorizontalAlignment(SwingConstants.CENTER);
         adminPanel.add(adminRequestStatusLabel, gbc);
 
-      gbc.gridy = 2;
-        gbc.fill = GridBagConstraints.BOTH; // Allow table to expand
-        gbc.weighty = 0.5;
-
-        // Create the structured table model
-        String[] columns = {"Request ID", "Submitter", "Role", "Details"};
-        pendingRequestsModel = new javax.swing.table.DefaultTableModel(columns, 0) {
-            @Override
-            public boolean isCellEditable(int row, int column) { return false; } // Read-only
-        };
-        
-        pendingRequestsTable = new JTable(pendingRequestsModel);
-        pendingRequestsTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        pendingRequestsTable.setBackground(Color.BLACK);
-        pendingRequestsTable.setForeground(Color.GREEN);
-        pendingRequestsTable.setGridColor(Color.DARK_GRAY);
-        pendingRequestsTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
-        pendingRequestsTable.setRowHeight(22);
-        TableColumn col0 = pendingRequestsTable.getColumnModel().getColumn(0);
-        TableColumn col1 = pendingRequestsTable.getColumnModel().getColumn(1);
-        TableColumn col2 = pendingRequestsTable.getColumnModel().getColumn(2);
-        TableColumn col3 = pendingRequestsTable.getColumnModel().getColumn(3);
-        col0.setPreferredWidth(280);
-        col1.setPreferredWidth(120);
-        col2.setPreferredWidth(90);
-        col3.setPreferredWidth(520);
-        pendingRequestsTable.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                if (e.getClickCount() == 2) {
-                    showSelectedPendingRequestDetails();
-                }
-            }
-        });
-
-        JScrollPane pendingScrollPane = new JScrollPane(pendingRequestsTable);
-        pendingScrollPane.setPreferredSize(new Dimension(920, 260));
+        gbc.gridy = 2;
+        adminRequestArea = new JTextArea(8, 24);
+        adminRequestArea.setEditable(false);
+        adminRequestArea.setLineWrap(true);
+        adminRequestArea.setWrapStyleWord(true);
+        adminRequestArea.setBackground(Color.BLACK);
+        adminRequestArea.setForeground(Color.GREEN);
+        adminRequestArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
+        JScrollPane pendingScrollPane = new JScrollPane(adminRequestArea);
         adminPanel.add(pendingScrollPane, gbc);
 
-        // Reset gbc for the buttons below
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.weighty = 0;
-
         gbc.gridy = 3;
-        gbc.gridwidth = 2;
-        JPanel adminActionRow = new JPanel(new FlowLayout(FlowLayout.CENTER, 12, 0));
-        adminActionRow.setBackground(new Color(30, 30, 35));
-        JButton refreshBtn = new JButton("Refresh");
-        refreshBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
-        refreshBtn.addActionListener(e -> refreshPendingAdminRequest());
-        JButton viewDetailsBtn = new JButton("View full details");
-        viewDetailsBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
-        viewDetailsBtn.addActionListener(e -> showSelectedPendingRequestDetails());
-        adminActionRow.add(refreshBtn);
-        adminActionRow.add(viewDetailsBtn);
-        adminPanel.add(adminActionRow, gbc);
-
-        gbc.gridy = 4;
         gbc.gridwidth = 2;
         JButton btnCalcTimes = new JButton("Calculate Completion Times");
         btnCalcTimes.setFont(new Font("SansSerif", Font.BOLD, 14));
@@ -300,19 +247,19 @@ public class VCRTSDashboard {
         btnCalcTimes.addActionListener(e -> calculateCompletionTimes());
         adminPanel.add(btnCalcTimes, gbc);
 
-        gbc.gridy = 5;
+        gbc.gridy = 4;
         JButton acceptBtn = new JButton("Accept");
         acceptBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
         acceptBtn.addActionListener(e -> submitAdminDecision("ACCEPTED"));
         adminPanel.add(acceptBtn, gbc);
 
-        gbc.gridy = 6;
+        gbc.gridy = 5;
         JButton rejectBtn = new JButton("Reject");
         rejectBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
         rejectBtn.addActionListener(e -> submitAdminDecision("REJECTED"));
         adminPanel.add(rejectBtn, gbc);
 
-        gbc.gridy = 7;
+        gbc.gridy = 6;
         JButton backBtn = new JButton("Back to Home");
         backBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
         backBtn.addActionListener(e -> {
@@ -356,37 +303,11 @@ public class VCRTSDashboard {
         return header;
     }
 
-// 1. The Main Tabbed Container
-    private JPanel createCombinedClientPanel(CloudDataService service) {
-        JPanel mainPanel = new JPanel(new BorderLayout());
-        mainPanel.setBackground(new Color(30, 30, 35));
-
-        JLabel title = new JLabel("Unified Client Portal", SwingConstants.CENTER);
-        title.setForeground(Color.CYAN);
-        title.setFont(new Font("SansSerif", Font.BOLD, 22));
-        title.setBorder(new EmptyBorder(20, 10, 10, 10));
-        mainPanel.add(title, BorderLayout.NORTH);
-
-        JTabbedPane tabbedPane = new JTabbedPane();
-        tabbedPane.setFont(new Font("SansSerif", Font.BOLD, 14));
+    private JPanel createSubmissionPanel() { 
         
-        // Add the two separate screens as tabs
-        tabbedPane.addTab("Submit Job Request", createJobSubmissionTab());
-        tabbedPane.addTab("Register Vehicle", createVehicleSubmissionTab(service));
+    //Renamed from createFormPanel to better reflect its purpose as the main interaction point for users 
+    // to submit new transactions and jobs. -DH
         
-        mainPanel.add(tabbedPane, BorderLayout.CENTER);
-
-        // Shared Back Button at the bottom
-        JPanel bottomPanel = new JPanel();
-        bottomPanel.setBackground(new Color(30, 30, 35));
-        bottomPanel.add(createBackToHomeButton(service));
-        mainPanel.add(bottomPanel, BorderLayout.SOUTH);
-
-        return mainPanel;
-    }
-
-    // 2. The Job Submission Form (Tab 1)
-    private JPanel createJobSubmissionTab() {
         JPanel panel = new JPanel(new GridBagLayout());
         panel.setBackground(new Color(30, 30, 35));
         panel.setBorder(new EmptyBorder(20, 20, 20, 20));
@@ -396,207 +317,75 @@ public class VCRTSDashboard {
         gbc.insets = new Insets(10, 10, 10, 10);
         gbc.weightx = 1.0;
 
-        gbc.gridx = 0;
-        gbc.gridy = 0;
+        // Role Selection
+        gbc.gridx = 0; gbc.gridy = 0;
         panel.add(createWhiteLabel("Select Role:"), gbc);
 
         roleBox = new JComboBox<>(new String[]{"CLIENT"});
         roleBox.setEnabled(false);
         roleBox.addActionListener(e -> adjustFields());
-        gbc.gridx = 1;
+        gbc.gridx = 1; 
         panel.add(roleBox, gbc);
 
-        gbc.gridx = 0;
-        gbc.gridy = 1;
-        idLabel = createWhiteLabel("Client ID:");
+        // Input Fields
+        gbc.gridx = 0; gbc.gridy = 1;
+        idLabel = createWhiteLabel("Owner ID:");
         panel.add(idLabel, gbc);
         idField = new JTextField();
-        gbc.gridx = 1;
-        panel.add(idField, gbc);
+        gbc.gridx = 1; panel.add(idField, gbc);
 
-        gbc.gridx = 0;
-        gbc.gridy = 2;
-        infoLabel = createWhiteLabel("Job Description:");
+        gbc.gridx = 0; gbc.gridy = 2;
+        infoLabel = createWhiteLabel("Vehicle Info:");
         panel.add(infoLabel, gbc);
         infoField = new JTextField();
-        gbc.gridx = 1;
-        panel.add(infoField, gbc);
+        gbc.gridx = 1; panel.add(infoField, gbc);
 
-        gbc.gridx = 0;
-        gbc.gridy = 3;
-        durLabel = createWhiteLabel("Duration (Hrs):");
+        gbc.gridx = 0; gbc.gridy = 3;
+        durLabel = createWhiteLabel("Residency (Hrs):");
         panel.add(durLabel, gbc);
-        durField = new JTextField("e.g., '2' for 2 hours");
-        gbc.gridx = 1;
-        panel.add(durField, gbc);
+        durField = new JTextField("Please enter in the expected duration in hours. For example, '2' for 2 hours.");
+        gbc.gridx = 1; panel.add(durField, gbc);
 
-        gbc.gridx = 0;
-        gbc.gridy = 4;
-        deadlineLabel = createWhiteLabel("Job Deadline (YYYY/MM/DD HH:MM:SS):");
+        gbc.gridx = 0; gbc.gridy = 4;
+        deadlineLabel = createWhiteLabel("Job Deadline (YYYY-MM-DD HR:MM:SS):");
         panel.add(deadlineLabel, gbc);
         deadlineField = new JTextField();
-        gbc.gridx = 1;
-        panel.add(deadlineField, gbc);
+        gbc.gridx = 1; panel.add(deadlineField, gbc);
 
+        // Buttons
         JButton submitBtn = new JButton("Submit Transaction");
         submitBtn.addActionListener(e -> saveEntry());
-        gbc.gridx = 0;
-        gbc.gridy = 5;
-        gbc.gridwidth = 2;
-        gbc.insets = new Insets(30, 10, 10, 10);
+        gbc.gridx = 0; gbc.gridy = 5; gbc.gridwidth = 2;
+        gbc.insets = new Insets(30, 10, 10, 10); // Extra top padding
         panel.add(submitBtn, gbc);
 
-        gbc.gridy = 6;
-        gbc.weighty = 1.0;
-        panel.add(Box.createGlue(), gbc);
+        /*
+        //Calculate Completion Times Button 
+        JButton calcBtn = new JButton("Calculate Completion Time");
+        calcBtn.addActionListener(e -> calculateCompletionTimes());
+        gbc.gridy = 6; gbc.insets = new Insets(10, 10, 10, 10);
+        panel.add(calcBtn, gbc);*/
 
-        return panel;
-    }
-
-    // 3. The Vehicle Registration Form (Tab 2)
-    private JPanel createVehicleSubmissionTab(CloudDataService service) {
-        JPanel panel = new JPanel(new GridBagLayout());
-        panel.setBackground(new Color(30, 30, 35));
-        panel.setBorder(new EmptyBorder(20, 20, 20, 20));
-
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.insets = new Insets(10, 10, 10, 10);
-        gbc.weightx = 1.0;
-
-        panel.add(createWhiteLabel("Owner ID:"), gbc);
-        JTextField ownerIdField = new JTextField();
-        gbc.gridx = 1;
-        panel.add(ownerIdField, gbc);
-
-        gbc.gridx = 0;
-        gbc.gridy = 1;
-        panel.add(createWhiteLabel("Vehicle Info:"), gbc);
-        JTextField vehicleInfoField = new JTextField();
-        gbc.gridx = 1;
-        panel.add(vehicleInfoField, gbc);
-
-        gbc.gridx = 0;
-        gbc.gridy = 2;
-        panel.add(createWhiteLabel("Residency Hours (Hrs):"), gbc);
-        JTextField residencyField = new JTextField("e.g., '4' for 4 hours");
-        gbc.gridx = 1;
-        panel.add(residencyField, gbc);
-
-        gbc.gridx = 0;
-        gbc.gridy = 3;
-        panel.add(createWhiteLabel("Vehicle Status:"), gbc);
-        JComboBox<String> statusBox = new JComboBox<>(
-        new String[]{"IDLE", "IN_SERVICE", "ASSIGNED", "UNAVAILABLE"});
-        gbc.gridx = 1;
-        panel.add(statusBox, gbc);
-
-        gbc.gridx = 0;
-        gbc.gridy = 4;
-        panel.add(createWhiteLabel("Availability:"), gbc);
-        String[] availOptions = {"YES", "NO"};
-        JComboBox<String> availabilityBox = new JComboBox<>(availOptions);
-        gbc.gridx = 1;
-        panel.add(availabilityBox, gbc);
-
-
-        gbc.gridx = 0;
-        gbc.gridy = 5;
-        gbc.gridwidth = 2;
-        JButton submitBtn = new JButton("Submit Vehicle to VC");
-        submitBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
-        submitBtn.addActionListener(e -> {
-            String ownerId = ownerIdField.getText().trim();
-            String vehicleInfo = vehicleInfoField.getText().trim();
-            String residency = residencyField.getText().trim();
-            String status = (String) statusBox.getSelectedItem();
-            String isAvailable = (String) availabilityBox.getSelectedItem();
-
-        if (ownerId.isEmpty() || vehicleInfo.isEmpty() || residency.isEmpty()
-                || status.isEmpty()) {
-            JOptionPane.showMessageDialog(frame, "Please complete all vehicle fields.");
-            return;
-        }
-
-        if (!ownerId.matches("\\d+")) {
-            JOptionPane.showMessageDialog(frame, "Owner ID must be numeric.");
-            return;
-        }
-
-        int residencyHours;
-        try {
-            residencyHours = Integer.parseInt(residency);
-        } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(frame, "Residency hours must be a number.");
-            return;
-        }
-
-        String entry = String.format(
-            "[%s] ROLE:VEHICLE_OWNER | ID:%s | INFO:%s | RESIDENCY:%d | STATUS:%s | AVAILABILITY:%s",
-            dtf.format(LocalDateTime.now()),
-            ownerId,
-            vehicleInfo,
-            residencyHours,
-            status,
-            isAvailable
-        );
-
-        try {
-            refreshMonitor("Connecting to VC Controller server...");
-
-            Socket socket = new Socket("localhost", 9806);
-            DataOutputStream outputStream = new DataOutputStream(socket.getOutputStream());
-            DataInputStream inputStream = new DataInputStream(socket.getInputStream());
-
-            outputStream.writeUTF(entry);
-            outputStream.writeUTF(service.getCurrentUsername() != null ? service.getCurrentUsername() : "");
-
-            String ack = inputStream.readUTF();
-            refreshMonitor("Server response: " + ack + " - Pending approval...");
-
-            JOptionPane.showMessageDialog(
-                frame,
-                "Vehicle submission has been sent and is pending admin approval.",
-                "Vehicle Submitted",
-                JOptionPane.INFORMATION_MESSAGE
-            );
-
-            ownerIdField.setText("");
-            vehicleInfoField.setText("");
-            residencyField.setText("");
-            statusBox.setSelectedIndex(0);
-            availabilityBox.setSelectedIndex(0);
-
-            new Thread(() -> {
-                try {
-                    inputStream.readUTF();
-                    inputStream.close();
-                    outputStream.close();
-                    socket.close();
-                } catch (IOException ignored) {}
-            }).start();
-
-        } catch (java.net.ConnectException ex) {
-            JOptionPane.showMessageDialog(frame, "Cannot connect to VC Controller server.");
-        } catch (IOException ex) {
-            JOptionPane.showMessageDialog(frame, "Connection error: " + ex.getMessage());
-        }
+        /*  Home Button to return to the main dashboard/home screen 
+            without needing to log out and back in. -DH
+        */
+        JButton homeBtn = new JButton("Back to Home");
+        homeBtn.addActionListener(e -> { 
+            showScreen(createHomePanel(service));
         });
-        panel.add(submitBtn, gbc);
+        gbc.gridy = 7; gbc.gridwidth = 2;
+        panel.add(homeBtn, gbc);
 
-        gbc.gridy = 6;
-        gbc.weighty = 1.0;
+        // Spacer to push everything to the top
+        gbc.gridy = 8; gbc.weighty = 1.0;
         panel.add(Box.createGlue(), gbc);
 
         return panel;
     }
-
 
 //Show Screen method calls Panels - DH
 
-    public void showScreen(JPanel contentPanel) {//DH
+    private void showScreen(JPanel contentPanel) {//DH
         frame.getContentPane().removeAll();
         frame.add(createHeader(), BorderLayout.NORTH);
         if (canViewVcrtsLogs()) {
@@ -677,7 +466,7 @@ public class VCRTSDashboard {
                 JOptionPane.showMessageDialog(frame, "Deadline must use format YYYY/MM/DD HH:MM:SS.");
                 return;
             }
-            String entry = String.format("[%s] ROLE:TASK_OWNER | ID:%s | INFO:%s | VEHICLE:%s | DEADLINE:%s | DURATION:0",
+            String entry = String.format("[%s] ROLE:TASK_OWNER | ID:%s | TASK:%s | VEHICLE:%s | DEADLINE:%s",
                 dtf.format(LocalDateTime.now()),
                 ownerIdField.getText().trim(),
                 taskField.getText().trim(),
@@ -686,10 +475,10 @@ public class VCRTSDashboard {
             try {
                 service.appendLog(entry);
                 refreshMonitor("Task Owner submitted to VC:\n" + entry);
+                JOptionPane.showMessageDialog(frame, "Task Owner request submitted.");
             } catch (IOException ex) {
-                ex.printStackTrace();
+                JOptionPane.showMessageDialog(frame, "Unable to submit Task Owner request.");
             }
-            sendToVCController(entry, ownerIdField.getText().trim());
         });
         panel.add(submitBtn, gbc);
 
@@ -733,18 +522,16 @@ public class VCRTSDashboard {
         gbc.gridx = 0;
         gbc.gridy = 3;
         panel.add(createWhiteLabel("Status Update:"), gbc);
-        String[] statusOptions = {"IDLE", "IN_PROGRESS", "MAINTENANCE"};
-        JComboBox<String> statusBox = new JComboBox<>(statusOptions);
+        JTextField statusField = new JTextField();
         gbc.gridx = 1;
-        panel.add(statusBox, gbc);
+        panel.add(statusField, gbc);
 
         gbc.gridx = 0;
         gbc.gridy = 4;
         panel.add(createWhiteLabel("Availability:"), gbc);
-        String[] availabilityOptions = {"AVAILABLE", "UNAVAILABLE"};
-        JComboBox<String> availabilityBox = new JComboBox<>(availabilityOptions);
+        JTextField availabilityField = new JTextField();
         gbc.gridx = 1;
-        panel.add(availabilityBox, gbc);
+        panel.add(availabilityField, gbc);
 
         gbc.gridx = 0;
         gbc.gridy = 5;
@@ -752,8 +539,7 @@ public class VCRTSDashboard {
         JButton submitBtn = new JButton("Submit to VC");
         submitBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
         submitBtn.addActionListener(e -> {
-            if (ownerIdField.getText().isBlank() || vehicleIdField.getText().isBlank() || 
-                statusBox.getSelectedItem() == null || availabilityBox.getSelectedItem() == null) {
+            if (ownerIdField.getText().isBlank() || vehicleIdField.getText().isBlank() || statusField.getText().isBlank() || availabilityField.getText().isBlank()) {
                 JOptionPane.showMessageDialog(frame, "Please complete all Vehicle Owner fields.");
                 return;
             }
@@ -761,15 +547,15 @@ public class VCRTSDashboard {
                 dtf.format(LocalDateTime.now()),
                 ownerIdField.getText().trim(),
                 vehicleIdField.getText().trim(),
-                (String) statusBox.getSelectedItem(),
-                (String) availabilityBox.getSelectedItem());
+                statusField.getText().trim(),
+                availabilityField.getText().trim());
             try {
                 service.appendLog(entry);
                 refreshMonitor("Vehicle Owner update submitted to VC:\n" + entry);
+                JOptionPane.showMessageDialog(frame, "Vehicle Owner submission sent.");
             } catch (IOException ex) {
-                System.err.println("Local log failed, but attempting server send: " + ex.getMessage());
+                JOptionPane.showMessageDialog(frame, "Unable to submit Vehicle Owner update.");
             }
-            sendToVCController(entry, ownerIdField.getText().trim());
         });
         panel.add(submitBtn, gbc);
 
@@ -832,6 +618,32 @@ public class VCRTSDashboard {
         if (deadlineLabel != null) deadlineLabel.setVisible(isClient);
         if (deadlineField != null) deadlineField.setVisible(isClient);
         frame.revalidate(); // Refreshes the UI so hidden fields don't leave weird spaces
+    }
+
+    private boolean requestApproval(String entry) {
+        //: Step 1: ACK (Acknowledgment)
+        JOptionPane.showMessageDialog(
+            frame,
+            "ACK: Request received by VC contoller. \n\nPending approval.",
+            "Resquest Acknowledged",
+            JOptionPane.INFORMATION_MESSAGE
+        );
+
+        //Step 2: VC Controller decision 
+        String[] options = {"Accept", "Reject"};
+
+        int decision = JOptionPane.showOptionDialog(
+            frame,
+            "VC Controller Review:\n\n" + entry + "\n\nAccept or Reject this request?",
+            "VC Controller Decision",
+            JOptionPane.DEFAULT_OPTION,
+            JOptionPane.QUESTION_MESSAGE,
+            null,
+            options,
+            options[0]
+        );
+
+        return decision == 0; // Accept = true
     }
 
     private void saveEntry() {
@@ -955,41 +767,8 @@ public class VCRTSDashboard {
                 JOptionPane.showMessageDialog(frame, scrollPane, "Completion Times", JOptionPane.INFORMATION_MESSAGE);
             }
             refreshMonitor(results.toString().trim());
-        } catch (HeadlessException | IOException e) {
+        } catch (Exception e) {
             JOptionPane.showMessageDialog(frame, "Error calculating completion times.");
-        }
-    }
-
-    private void sendToVCController(String entry, String id) {
-        try {
-            refreshMonitor("Connecting to VC Controller server...");
-            Socket socket = new Socket("localhost", 9806);
-            DataOutputStream outputStream = new DataOutputStream(socket.getOutputStream());
-            DataInputStream inputStream = new DataInputStream(socket.getInputStream());
-
-            // Send data and username
-            outputStream.writeUTF(entry);
-            outputStream.writeUTF(service.getCurrentUsername() != null ? service.getCurrentUsername() : id);
-
-            // Wait for ACK
-            String ack = inputStream.readUTF();
-            refreshMonitor("Server response: " + ack + " - Pending approval...");
-
-            JOptionPane.showMessageDialog(frame,
-                "Submission sent! Pending admin approval.\nYou will be notified of the decision.",
-                "Success", JOptionPane.INFORMATION_MESSAGE);
-
-            // Background thread to wait for final decision (ACCEPTED/REJECTED)
-            new Thread(() -> {
-                try {
-                    String finalDecision = inputStream.readUTF();
-                    refreshMonitor("Final Admin Decision: " + finalDecision);
-                    socket.close();
-                } catch (IOException ignored) {}
-            }).start();
-
-        } catch (IOException ex) {
-            JOptionPane.showMessageDialog(frame, "Server Error: Make sure ServerMain is running.");
         }
     }
 
@@ -1041,88 +820,42 @@ public class VCRTSDashboard {
         }
     }
 
-    private void showSelectedPendingRequestDetails() {
-        if (pendingRequestsModel == null || pendingRequestsTable == null) return;
-        int row = pendingRequestsTable.getSelectedRow();
-        if (row < 0) {
-            JOptionPane.showMessageDialog(frame, "Select a row in the table first.");
+    private void refreshPendingAdminRequest() {
+        if (adminRequestArea == null || adminRequestStatusLabel == null) {
             return;
         }
-        String id = String.valueOf(pendingRequestsModel.getValueAt(row, 0));
-        String submitter = String.valueOf(pendingRequestsModel.getValueAt(row, 1));
-        String role = String.valueOf(pendingRequestsModel.getValueAt(row, 2));
-        String entry = String.valueOf(pendingRequestsModel.getValueAt(row, 3));
-        String full = "Request ID: " + id + "\nSubmitter: " + submitter + "\nRole: " + role + "\n\nFull entry:\n" + entry;
-        JTextArea area = new JTextArea(full);
-        area.setEditable(false);
-        area.setLineWrap(true);
-        area.setWrapStyleWord(true);
-        area.setFont(new Font("Monospaced", Font.PLAIN, 13));
-        JScrollPane sp = new JScrollPane(area);
-        sp.setPreferredSize(new Dimension(720, 480));
-        JOptionPane.showMessageDialog(frame, sp, "Request details", JOptionPane.INFORMATION_MESSAGE);
-    }
-
-    private void refreshPendingAdminRequest() {
-        if (pendingRequestsModel == null || pendingRequestsTable == null || adminRequestStatusLabel == null) return;
 
         try {
-            List<Map<String, String>> requests = service.readAllPendingRequests();
-            
-            // Save selected row ID to avoid resetting selection on every timer tick
-            int selectedRow = pendingRequestsTable.getSelectedRow();
-            String selectedId = selectedRow >= 0 ? (String) pendingRequestsModel.getValueAt(selectedRow, 0) : null;
+            Map<String, String> pendingRequest = service.readPendingRequest();
+            String entry = pendingRequest.get("ENTRY");
 
-            pendingRequestsModel.setRowCount(0); // Clear table
-
-            if (requests.isEmpty()) {
-                adminRequestStatusLabel.setText("Waiting for client requests...");
+            if (entry == null || entry.isBlank()) {
+                adminRequestStatusLabel.setText("Waiting for client request...");
+                adminRequestArea.setText("No pending client request.");
                 return;
             }
 
-            adminRequestStatusLabel.setText("Pending client requests: " + requests.size());
-
-            int newSelectedIndex = -1;
-            for (int i = 0; i < requests.size(); i++) {
-                Map<String, String> req = requests.get(i);
-                String id = req.get("REQUEST_ID");
-                String submitter = req.get("SUBMITTER");
-                String entry = req.get("ENTRY");
-                
-                // Parse role dynamically so the admin can see it in its own column
-                Map<String, String> parsed = service.parseLogEntry(entry);
-                String role = parsed.getOrDefault("ROLE", "UNKNOWN");
-                
-                pendingRequestsModel.addRow(new Object[]{id, submitter, role, entry});
-                
-                if (id != null && id.equals(selectedId)) {
-                    newSelectedIndex = i;
-                }
-            }
-            
-            // Restore selection
-            if (newSelectedIndex >= 0) {
-                pendingRequestsTable.setRowSelectionInterval(newSelectedIndex, newSelectedIndex);
-            }
-            
+            adminRequestStatusLabel.setText("Pending client request");
+            adminRequestArea.setText(entry);
+            adminRequestArea.setCaretPosition(0);
         } catch (IOException e) {
-            adminRequestStatusLabel.setText("Unable to load pending requests");
+            adminRequestStatusLabel.setText("Unable to load pending request");
+            adminRequestArea.setText("Error reading pending request.");
         }
     }
 
     private void submitAdminDecision(String decision) {
-        int selectedRow = pendingRequestsTable.getSelectedRow();
-        if (selectedRow < 0) {
-            JOptionPane.showMessageDialog(frame, "Please select a request from the table first.");
-            return;
-        }
-
-        // Grab data from the selected row
-        String requestId = (String) pendingRequestsModel.getValueAt(selectedRow, 0);
-        String submitter = (String) pendingRequestsModel.getValueAt(selectedRow, 1);
-        String entry = (String) pendingRequestsModel.getValueAt(selectedRow, 3);
-
         try {
+            Map<String, String> pendingRequest = service.readPendingRequest();
+            String requestId = pendingRequest.get("REQUEST_ID");
+            String entry = pendingRequest.get("ENTRY");
+            String submitter = pendingRequest.get("SUBMITTER");
+
+            if (requestId == null || requestId.isBlank() || entry == null || entry.isBlank()) {
+                JOptionPane.showMessageDialog(frame, "No pending client request.");
+                return;
+            }
+
             service.writeAdminDecision(requestId, decision);
 
             if (submitter != null && !submitter.isBlank()) {
@@ -1131,9 +864,8 @@ public class VCRTSDashboard {
             }
 
             adminRequestStatusLabel.setText("Last response sent: " + decision);
+            adminRequestArea.setText(entry + "\n\nDecision sent: " + decision);
             refreshMonitor("Admin decision sent for request:\n" + entry + "\nSTATUS: " + decision);
-            
-            refreshPendingAdminRequest(); // Refresh the table immediately to clear the accepted/rejected row
         } catch (IOException e) {
             JOptionPane.showMessageDialog(frame, "Unable to send admin decision.");
         }

@@ -3,12 +3,12 @@ package app;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import javax.swing.*;
+import services.CloudDataService;
+import models.job.Job;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
-import javax.swing.*;
-import models.job.Job;
-import services.CloudDataService;
 
 public class ServerMain {//Philip
 
@@ -20,11 +20,14 @@ public class ServerMain {//Philip
 
     public static void main(String[] args) {
 
-        CloudDataService service = new CloudDataService(); //NO path needed anymore - DH
+        CloudDataService service = new CloudDataService(
+            java.nio.file.Paths.get("vcrts_log.txt"),
+            java.nio.file.Paths.get("users.txt")
+        );
 
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-        } catch (Exception ignored) {} //DH
+        } catch (Exception ignored) {}
 
         System.out.println("----------$$$ This is the VC Controller (Server) $$$--------");
         System.out.println("waiting for client to connect...");
@@ -52,8 +55,11 @@ public class ServerMain {//Philip
 
     private static void handleClient(Socket socket, CloudDataService service) {
 
-        try (DataInputStream inputStream = new DataInputStream(socket.getInputStream());
-            DataOutputStream outputStream = new DataOutputStream(socket.getOutputStream())) {
+        try {
+            // Read message (from client)
+            inputStream = new DataInputStream(socket.getInputStream());
+            outputStream = new DataOutputStream(socket.getOutputStream());
+
             // Read the submission entry and submitter username from client
             String entry = inputStream.readUTF();
             String submitter = inputStream.readUTF();
@@ -71,9 +77,9 @@ public class ServerMain {//Philip
             boolean accepted = waitForAdminDecision(service, requestId);
 
             if (accepted) {
-                // Save accepted requests to the matching table.
+                //  decide if we save a job ! ! ! ! ! ! ! ! ! !!! !! ! 
                 String role = parseField(entry, "ROLE");
-                if ("CLIENT".equals(role) || "TASK_OWNER".equals(role)) {
+                if ("CLIENT".equals(role)) {
                     String id = parseField(entry, "ID");
                     String info = parseField(entry, "INFO");
                     int duration = Integer.parseInt(parseField(entry, "DURATION"));
@@ -85,18 +91,11 @@ public class ServerMain {//Philip
 
                     Job job = Job.createJob(id, info, duration, arrivalTime, deadlineTime);
                     service.appendJob(job);
-                } else if ("VEHICLE_OWNER".equals(role)) {
-                    String ownerId = parseField(entry, "ID");
-                    String vehicleInfo = parseField(entry, "INFO");
-                    int residencyHours = Integer.parseInt(parseField(entry, "RESIDENCY"));
-                    String status = parseField(entry, "STATUS");
-                    String availability = parseField(entry, "AVAILABILITY");
-                    service.appendVehicle(ownerId, vehicleInfo, residencyHours, status, availability);
                 }
 
                 service.appendLog(entry);
                 outputStream.writeUTF("ACCEPTED");
-                System.out.println("Request ACCEPTED. Data saved to database.");
+                System.out.println("Request ACCEPTED. Data saved to file.");
             } else {
                 outputStream.writeUTF("REJECTED");
                 System.out.println("Request REJECTED. Nothing saved.");
