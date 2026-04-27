@@ -480,24 +480,28 @@ public class VCRTSDashboard {
 
         gbc.gridx = 0;
         gbc.gridy = 2;
-        panel.add(createWhiteLabel("Residency Hours:"), gbc);
-        JTextField residencyField = new JTextField();
+        panel.add(createWhiteLabel("Residency Hours (Hrs):"), gbc);
+        JTextField residencyField = new JTextField("e.g., '4' for 4 hours");
         gbc.gridx = 1;
         panel.add(residencyField, gbc);
 
         gbc.gridx = 0;
         gbc.gridy = 3;
-        panel.add(createWhiteLabel("Status Update:"), gbc);
-        JTextField statusField = new JTextField();
+        panel.add(createWhiteLabel("Vehicle Status:"), gbc);
+        JComboBox<String> statusBox = new JComboBox<>(
+        new String[]{"IDLE", "IN_SERVICE", "ASSIGNED", "UNAVAILABLE"});
         gbc.gridx = 1;
-        panel.add(statusField, gbc);
+        panel.add(statusBox, gbc);
 
         gbc.gridx = 0;
         gbc.gridy = 4;
-        panel.add(createWhiteLabel("Availability:"), gbc);
-        JTextField availabilityField = new JTextField();
-        gbc.gridx = 1;
-        panel.add(availabilityField, gbc);
+        JCheckBox availabilityBox = new JCheckBox("Vehicle is available");
+        availabilityBox.setBackground(new Color(30, 30, 35));
+        availabilityBox.setForeground(Color.WHITE);
+        availabilityBox.setSelected(true);
+    gbc.gridx = 1;
+    panel.add(availabilityBox, gbc);
+
 
         gbc.gridx = 0;
         gbc.gridy = 5;
@@ -508,11 +512,11 @@ public class VCRTSDashboard {
             String ownerId = ownerIdField.getText().trim();
             String vehicleInfo = vehicleInfoField.getText().trim();
             String residency = residencyField.getText().trim();
-            String status = statusField.getText().trim();
-            String availability = availabilityField.getText().trim();
+            String status = (String) statusBox.getSelectedItem();
+            boolean isAvailable = availabilityBox.isSelected();
 
         if (ownerId.isEmpty() || vehicleInfo.isEmpty() || residency.isEmpty()
-                || status.isEmpty() || availability.isEmpty()) {
+                || status.isEmpty()) {
             JOptionPane.showMessageDialog(frame, "Please complete all vehicle fields.");
             return;
         }
@@ -537,7 +541,7 @@ public class VCRTSDashboard {
             vehicleInfo,
             residencyHours,
             status,
-            availability
+            isAvailable
         );
 
         try {
@@ -563,8 +567,8 @@ public class VCRTSDashboard {
             ownerIdField.setText("");
             vehicleInfoField.setText("");
             residencyField.setText("");
-            statusField.setText("");
-            availabilityField.setText("");
+            statusBox.setSelectedIndex(0);
+            availabilityBox.setSelected(true);
 
             new Thread(() -> {
                 try {
