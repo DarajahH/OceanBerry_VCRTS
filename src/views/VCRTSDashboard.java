@@ -629,6 +629,9 @@ public class VCRTSDashboard {
         frame.repaint();
     }
 
+    /*
+    TaskOwner isn't needed - Delete before next push - DH
+    
     private JPanel createTaskOwnerScreen(CloudDataService service) {//DH
         JPanel panel = new JPanel(new GridBagLayout());
         panel.setBackground(new Color(30, 30, 35));
@@ -754,6 +757,7 @@ public class VCRTSDashboard {
         panel.add(createBackToHomeButton(service), gbc);
         return panel;
     }
+*/
 
     private JPanel createVehicleOwnerScreen(CloudDataService service) {//DH
         JPanel panel = new JPanel(new GridBagLayout());
@@ -1135,17 +1139,7 @@ public class VCRTSDashboard {
             JOptionPane.showMessageDialog(frame, "Duration must be a number.");
             return;
         }
-/*
-        try {
-            LocalDateTime arrivalTime = LocalDateTime.now();
-            String entry = String.format("[%s] ROLE:%s | ID:%s | INFO:%s | DURATION:%d",
-                dtf.format(arrivalTime), role, id, info, duration);
-
-        if ("CLIENT".equals(role) && deadline.isEmpty()) {
-            JOptionPane.showMessageDialog(frame, "Client jobs must include a deadline.");
-            return;
-        }*/
-
+        
         try {
             LocalDateTime arrivalTime = LocalDateTime.now();
             LocalDateTime deadlineTime = deadlineField.isVisible()
