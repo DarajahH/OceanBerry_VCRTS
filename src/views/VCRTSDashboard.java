@@ -14,8 +14,8 @@ import java.util.List;
 import java.util.Map;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-import javax.swing.table.TableColumn;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableColumn;
 import models.job.Job;
 import services.CloudDataService;
 import services.VCController;
@@ -46,6 +46,7 @@ public class VCRTSDashboard {
     private JTable pendingRequestsTable;
     private javax.swing.table.DefaultTableModel pendingRequestsModel;
     private JLabel adminRequestStatusLabel;
+    private JLabel notificationBadge;
     private Timer adminRefreshTimer;
     //private Timer notificationTimer;
 
@@ -100,8 +101,8 @@ public class VCRTSDashboard {
         frame.setVisible(true);
 
         if (isClientUser()) {
-          //  showUnreadNotifications();
-            //startNotificationTimer();
+            refreshNotifications();
+            displayUnreadNotificationsIfAny();
         }
     }
     
@@ -151,16 +152,14 @@ public class VCRTSDashboard {
 
         int nextRow = 3;
         if (isOwnerUser()) {
-            JButton btnCalcTimes = new JButton("Calculate Completion Times");
-            btnCalcTimes.setFont(new Font("SansSerif", Font.BOLD, 14));
+            JButton btnCalcTimes = createStyledButton("Calculate Completion Times");
             btnCalcTimes.addActionListener(e -> calculateCompletionTimes());
             gbc.gridy = nextRow++;
             panel.add(btnCalcTimes, gbc);
         }
 
         if (isClientUser()) {
-            JButton btnOpenForm = new JButton("Submit New Transaction");
-            btnOpenForm.setFont(new Font("SansSerif", Font.BOLD, 14));
+            JButton btnOpenForm = createStyledButton("Submit New Transaction");
             btnOpenForm.addActionListener(e -> showScreen(createCombinedClientPanel(service)));
             gbc.gridy = nextRow++;
             gbc.insets = new Insets(20, 0, 10, 0);
@@ -175,8 +174,7 @@ public class VCRTSDashboard {
         panel.add(btnResidencyView, gbc);
 
         if (isClientUser()) {//DH
-            JButton taskOwnerBtn = new JButton("Task Owner Portal");
-            taskOwnerBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
+            JButton taskOwnerBtn = createStyledButton("Task Owner Portal");
             taskOwnerBtn.addActionListener(e -> showScreen(createTaskOwnerScreen(service)));
             gbc.gridy = nextRow++;
             gbc.insets = new Insets(10, 0, 10, 0);
@@ -184,8 +182,7 @@ public class VCRTSDashboard {
         }
 
         if (isOwnerUser()) {//DH
-            JButton vehicleOwnerBtn = new JButton("Vehicle Owner Portal");
-            vehicleOwnerBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
+            JButton vehicleOwnerBtn = createStyledButton("Vehicle Owner Portal");
             vehicleOwnerBtn.addActionListener(e -> showScreen(createVehicleOwnerScreen(service)));
             gbc.gridy = nextRow++;
             gbc.insets = new Insets(10, 0, 10, 0);
@@ -193,8 +190,7 @@ public class VCRTSDashboard {
         }
 
         if (isAdminUser()) {//DH
-            JButton btnAdminScreen = new JButton("Go to Admin Screen");
-            btnAdminScreen.setFont(new Font("SansSerif", Font.BOLD, 14));
+            JButton btnAdminScreen = createStyledButton("Go to Admin Screen");
             btnAdminScreen.addActionListener(e -> showScreen(createAdminScreen(service)));
             gbc.gridy = nextRow++;
             panel.add(btnAdminScreen, gbc);
@@ -298,11 +294,9 @@ public class VCRTSDashboard {
         gbc.gridwidth = 2;
         JPanel adminActionRow = new JPanel(new FlowLayout(FlowLayout.CENTER, 12, 0));
         adminActionRow.setBackground(new Color(30, 30, 35));
-        JButton refreshBtn = new JButton("Refresh");
-        refreshBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
+        JButton refreshBtn = createStyledButton("Refresh");
         refreshBtn.addActionListener(e -> refreshPendingAdminRequest());
-        JButton viewDetailsBtn = new JButton("View full details");
-        viewDetailsBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
+        JButton viewDetailsBtn = createStyledButton("View full details");
         viewDetailsBtn.addActionListener(e -> showSelectedPendingRequestDetails());
         adminActionRow.add(refreshBtn);
         adminActionRow.add(viewDetailsBtn);
@@ -310,28 +304,23 @@ public class VCRTSDashboard {
 
         gbc.gridy = 4;
         gbc.gridwidth = 2;
-        JButton btnCalcTimes = new JButton("Calculate Completion Times");
-        btnCalcTimes.setFont(new Font("SansSerif", Font.BOLD, 14));
-        btnCalcTimes.setBackground(new Color(70, 130, 180));
-        btnCalcTimes.setForeground(Color.RED);
+        JButton btnCalcTimes = createStyledButton("Calculate Completion Times");
+        btnCalcTimes.setForeground(Color.WHITE);
         btnCalcTimes.addActionListener(e -> calculateCompletionTimes());
         adminPanel.add(btnCalcTimes, gbc);
 
         gbc.gridy = 5;
-        JButton acceptBtn = new JButton("Accept");
-        acceptBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
+        JButton acceptBtn = createStyledButton("Accept");
         acceptBtn.addActionListener(e -> submitAdminDecision("ACCEPTED"));
         adminPanel.add(acceptBtn, gbc);
 
         gbc.gridy = 6;
-        JButton rejectBtn = new JButton("Reject");
-        rejectBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
+        JButton rejectBtn = createStyledButton("Reject");
         rejectBtn.addActionListener(e -> submitAdminDecision("REJECTED"));
         adminPanel.add(rejectBtn, gbc);
 
         gbc.gridy = 7;
-        JButton backBtn = new JButton("Back to Home");
-        backBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
+        JButton backBtn = createStyledButton("Back to Home");
         backBtn.addActionListener(e -> {
             stopAdminRefreshTimer();
             showScreen(createHomePanel(service));
@@ -361,15 +350,29 @@ public class VCRTSDashboard {
         roleLabel.setHorizontalAlignment(SwingConstants.CENTER);
         header.add(roleLabel, BorderLayout.CENTER);
 
-        JButton logoutBtn = new JButton("Logout");
+        JPanel rightHeader = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        rightHeader.setOpaque(false);
+
+        JButton notificationsBtn = createStyledButton("Notifications");
+        notificationsBtn.setPreferredSize(new Dimension(140, 36));
+        notificationsBtn.addActionListener(e -> showClientNotifications());
+        rightHeader.add(notificationsBtn);
+
+        notificationBadge = createNotificationBadge(0);
+        rightHeader.add(notificationBadge);
+
+        JButton logoutBtn = createStyledButton("Logout");
         logoutBtn.addActionListener(e -> {
           //  stopNotificationTimer();
             stopAdminRefreshTimer();
             frame.dispose();
             new LoginScreen(service);
         });
-        header.add(logoutBtn, BorderLayout.EAST);
+        rightHeader.add(logoutBtn);
 
+        header.add(rightHeader, BorderLayout.EAST);
+
+        refreshNotifications();
         return header;
     }
 
@@ -455,7 +458,7 @@ public class VCRTSDashboard {
         gbc.gridx = 1;
         panel.add(deadlineField, gbc);
 
-        JButton submitBtn = new JButton("Submit Transaction");
+        JButton submitBtn = createStyledButton("Submit Transaction");
         submitBtn.addActionListener(e -> saveEntry());
         gbc.gridx = 0;
         gbc.gridy = 5;
@@ -522,8 +525,7 @@ public class VCRTSDashboard {
         gbc.gridx = 0;
         gbc.gridy = 5;
         gbc.gridwidth = 2;
-        JButton submitBtn = new JButton("Submit Vehicle to VC");
-        submitBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
+        JButton submitBtn = createStyledButton("Submit Vehicle to VC");
         submitBtn.addActionListener(e -> {
             String ownerId = ownerIdField.getText().trim();
             String vehicleInfo = vehicleInfoField.getText().trim();
@@ -572,6 +574,10 @@ public class VCRTSDashboard {
 
             String ack = inputStream.readUTF();
             refreshMonitor("Server response: " + ack + " - Pending approval...");
+            try {
+                service.addNotification(service.getCurrentUsername(), "Server ACK received: " + ack + " — vehicle submission pending approval.");
+                refreshNotifications();
+            } catch (IOException ignored) {}
 
             JOptionPane.showMessageDialog(
                 frame,
@@ -629,8 +635,7 @@ public class VCRTSDashboard {
         frame.repaint();
     }
 
-    /*
-    TaskOwner isn't needed - Delete before next push - DH
+    // TaskOwner isn't needed - Delete before next push - DH
     
     private JPanel createTaskOwnerScreen(CloudDataService service) {//DH
         JPanel panel = new JPanel(new GridBagLayout());
@@ -757,7 +762,6 @@ public class VCRTSDashboard {
         panel.add(createBackToHomeButton(service), gbc);
         return panel;
     }
-*/
 
     private JPanel createVehicleOwnerScreen(CloudDataService service) {//DH
         JPanel panel = new JPanel(new GridBagLayout());
@@ -798,14 +802,14 @@ public class VCRTSDashboard {
         panel.add(createWhiteLabel("Status Update:"), gbc);
         JComboBox<String> statusField = new JComboBox<>(new String[] {"Usable", "In Use", "Maintenance"});
         gbc.gridx = 1;
-        panel.add(statusBox, gbc);
+        panel.add(statusField, gbc);
 
         gbc.gridx = 0;
         gbc.gridy = 4;
         panel.add(createWhiteLabel("Availability:"), gbc);
         JComboBox<String> availabilityField = new JComboBox<>(new String[] {"open", "closed"});
         gbc.gridx = 1;
-        panel.add(availabilityBox, gbc);
+        panel.add(availabilityField, gbc);
 
         gbc.gridx = 0;
         gbc.gridy = 5;
@@ -879,6 +883,87 @@ public class VCRTSDashboard {
         JLabel label = new JLabel(text);
         label.setForeground(Color.WHITE);
         return label;
+    }
+
+    private JButton createStyledButton(String text) {
+        JButton button = new JButton(text);
+        button.setFont(new Font("SansSerif", Font.BOLD, 14));
+        button.setBackground(new Color(45, 120, 230));
+        button.setForeground(Color.WHITE);
+        button.setFocusPainted(false);
+        button.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(30, 80, 180), 1),
+            BorderFactory.createEmptyBorder(8, 15, 8, 15)
+        ));
+        return button;
+    }
+
+    private JLabel createNotificationBadge(int count) {
+        JLabel badge = new JLabel(String.valueOf(count));
+        badge.setOpaque(true);
+        badge.setBackground(new Color(220, 20, 60));
+        badge.setForeground(Color.WHITE);
+        badge.setFont(new Font("SansSerif", Font.BOLD, 12));
+        badge.setBorder(BorderFactory.createEmptyBorder(4, 10, 4, 10));
+        badge.setHorizontalAlignment(SwingConstants.CENTER);
+        badge.setVisible(count > 0);
+        return badge;
+    }
+
+    private void refreshNotifications() {
+        if (!isClientUser() || notificationBadge == null) return;
+        try {
+            List<String> unread = service.getUnreadNotifications(service.getCurrentUsername());
+            int count = unread == null ? 0 : unread.size();
+            notificationBadge.setText(String.valueOf(count));
+            notificationBadge.setVisible(count > 0);
+        } catch (IOException ignored) {
+            notificationBadge.setText("0");
+            notificationBadge.setVisible(false);
+        }
+    }
+
+    private void showClientNotifications() {
+        if (!isClientUser()) {
+            JOptionPane.showMessageDialog(frame, "Notifications are available for clients only.");
+            return;
+        }
+        try {
+            List<String> unread = service.getUnreadNotifications(service.getCurrentUsername());
+            if (unread == null || unread.isEmpty()) {
+                JOptionPane.showMessageDialog(frame, "No unread notifications.");
+                notificationBadge.setVisible(false);
+                return;
+            }
+            StringBuilder message = new StringBuilder();
+            for (String note : unread) {
+                message.append("• ").append(note).append("\n\n");
+            }
+            JTextArea area = new JTextArea(message.toString());
+            area.setEditable(false);
+            area.setLineWrap(true);
+            area.setWrapStyleWord(true);
+            area.setFont(new Font("SansSerif", Font.PLAIN, 13));
+            JScrollPane scroll = new JScrollPane(area);
+            scroll.setPreferredSize(new Dimension(500, 320));
+            JOptionPane.showMessageDialog(frame, scroll, "Unread Notifications", JOptionPane.INFORMATION_MESSAGE);
+            service.markNotificationsRead(service.getCurrentUsername());
+            refreshNotifications();
+        } catch (IOException e) {
+            JOptionPane.showMessageDialog(frame, "Unable to load notifications.");
+        }
+    }
+
+    private void displayUnreadNotificationsIfAny() {
+        if (!isClientUser()) return;
+        try {
+            List<String> unread = service.getUnreadNotifications(service.getCurrentUsername());
+            if (unread != null && !unread.isEmpty()) {
+                String first = unread.get(0);
+                JOptionPane.showMessageDialog(frame, first, "New Notification", JOptionPane.INFORMATION_MESSAGE);
+                refreshNotifications();
+            }
+        } catch (IOException ignored) {}
     }
 
     private VehicleChoice[] loadVehicleChoices(CloudDataService service) {
@@ -1161,6 +1246,10 @@ public class VCRTSDashboard {
 
             String ack = inputStream.readUTF();
             refreshMonitor("Server response: " + ack + " - Pending approval...");
+            try {
+                service.addNotification(service.getCurrentUsername(), "Server ACK received: " + ack + " — request pending approval.");
+                refreshNotifications();
+            } catch (IOException ignored) {}
 
             JOptionPane.showMessageDialog(frame,
                 "Your transaction has been submitted and is pending admin approval.\n"
@@ -1238,6 +1327,10 @@ public class VCRTSDashboard {
             // Wait for ACK
             String ack = inputStream.readUTF();
             refreshMonitor("Server response: " + ack + " - Pending approval...");
+            try {
+                service.addNotification(service.getCurrentUsername(), "Server ACK received: " + ack + " — submission pending approval.");
+                refreshNotifications();
+            } catch (IOException ignored) {}
 
             JOptionPane.showMessageDialog(frame,
                 "Submission sent! Pending admin approval.\nYou will be notified of the decision.",

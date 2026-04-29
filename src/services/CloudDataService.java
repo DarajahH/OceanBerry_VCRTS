@@ -1,7 +1,7 @@
 package services;
 
-import database.DatabaseService;
 import database.DatabaseConnection;
+import database.DatabaseService;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -205,17 +205,18 @@ public class CloudDataService {
         return clientJobs;
     }
 
-    public void appendVehicle(String ownerId, String vehicleInfo, int residencyHours) throws IOException {
+    public void appendVehicle(String ownerId, String vehicleInfo, int residencyHours, String status, String availability) throws IOException {
         if (databaseReady) {
-            try { db.insertVehicle(ownerId, vehicleInfo, residencyHours); return; }
+            try { db.insertVehicle(ownerId, vehicleInfo, residencyHours, status, availability); return; }
             catch (SQLException e) { /* fall back to file */ }
         }
-        String entry = String.format("[%s] ROLE:VEHICLE_OWNER | ID:%s | VEHICLE:%s | STATUS:%s | AVAILABILITY:%s",
+        String entry = String.format("[%s] ROLE:VEHICLE_OWNER | ID:%s | VEHICLE:%s | RESIDENCY:%d | STATUS:%s | AVAILABILITY:%s",
             LocalDateTime.now().toString(),
             safeFileValue(ownerId),
             safeFileValue(vehicleInfo),
-            "Usable",
-            "open");
+            residencyHours,
+            safeFileValue(status),
+            safeFileValue(availability));
         appendLine(logPath, entry);
     }
 

@@ -1,7 +1,5 @@
 package views;
 import java.awt.*;
-import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
 import javax.swing.*;
 import services.CloudDataService;
 
@@ -29,9 +27,22 @@ public class LoginScreen {
         JButton loginBtn = new JButton("Login");
         JButton regBtn = new JButton("Create Account");
 
+        loginBtn.setBackground(new Color(45, 120, 230));
+        loginBtn.setForeground(Color.WHITE);
+        loginBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
+        loginBtn.setFocusPainted(false);
+        loginBtn.setBorder(BorderFactory.createEmptyBorder(8, 16, 8, 16));
+
+        regBtn.setBackground(new Color(60, 170, 90));
+        regBtn.setForeground(Color.WHITE);
+        regBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
+        regBtn.setFocusPainted(false);
+        regBtn.setBorder(BorderFactory.createEmptyBorder(8, 16, 8, 16));
+
         gbc.gridx = 0; gbc.gridy = 0;
         JLabel title = new JLabel("VEHICULAR CLOUD LOGIN");
         title.setForeground(Color.CYAN);
+        title.setFont(new Font("SansSerif", Font.BOLD, 20));
         frame.add(title, gbc);
 
         gbc.gridy = 1; frame.add(new JLabel("<html><font color='white'>Username:</font></html>"), gbc);
