@@ -1732,4 +1732,31 @@ public class VCRTSDashboard {
         idField.setText(""); infoField.setText(""); durField.setText(""); deadlineField.setText("");
     }
 
+
+    private JButton createStyledButton(String text) {
+        JButton button = new JButton(text);
+        button.setFont(new Font("SansSerif", Font.BOLD, 14));
+        button.setFocusPainted(false); // Removes the ugly dotted line when clicked
+        button.setCursor(new Cursor(Cursor.HAND_CURSOR)); // Changes mouse to a pointer hand
+        button.setBackground(new Color(60, 60, 65)); // Base dark gray color
+        button.setForeground(Color.WHITE); 
+
+        // Force the hover color change
+        button.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                button.setBackground(new Color(70, 130, 180)); // Steel blue on hover
+            }
+
+            @Override
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                button.setBackground(new Color(60, 60, 65)); // Return to base dark gray
+            }
+        });
+        
+        return button;
+    }
+
+
+
 }
