@@ -47,6 +47,7 @@ public class VCRTSDashboard {
     private JLabel adminRequestStatusLabel;
     private JLabel notificationBadge;
     private Timer adminRefreshTimer;
+    private Timer clientNotificationTimer; // Add this line for Client notification -DH
 
     /** Constructor: Initializes the main dashboard frame and sets up the UI components based on user role. -DH */
     public VCRTSDashboard(CloudDataService service, String currentUserRole) {
@@ -106,6 +107,7 @@ public class VCRTSDashboard {
         if (isClientUser()) {
             refreshNotifications();
             displayUnreadNotificationsIfAny();
+            startClientNotificationTimer(); // Start real-time polling -DH
         }
     }
     
@@ -333,6 +335,7 @@ public class VCRTSDashboard {
         JButton logoutBtn = createStyledButton("Logout");
         logoutBtn.addActionListener(e -> {
             stopAdminRefreshTimer();
+            stopClientNotificationTimer();
             frame.dispose();
             new LoginScreen(service);
         });
@@ -1560,6 +1563,8 @@ public class VCRTSDashboard {
         }
     }
 
+//----------------------Admin Notification Timers----------------------
+    
     private void startAdminRefreshTimer() {
         stopAdminRefreshTimer();
         adminRefreshTimer = new Timer(1000, e -> refreshPendingAdminRequest());
@@ -1570,6 +1575,23 @@ public class VCRTSDashboard {
         if (adminRefreshTimer != null) {
             adminRefreshTimer.stop();
             adminRefreshTimer = null;
+        }
+    }
+
+    //----------------------Client Notification Timers----------------------
+
+    /** Starts a background polling timer to fetch client notifications in real-time. -DH */
+    private void startClientNotificationTimer() {
+        stopClientNotificationTimer(); // Always stop an existing one before making a new one
+        clientNotificationTimer = new Timer(2000, e -> refreshNotifications());
+        clientNotificationTimer.start();
+    }
+
+    /** Stops to preserve memory and resources. -DH */
+    private void stopClientNotificationTimer() {
+        if (clientNotificationTimer != null) {
+            clientNotificationTimer.stop();
+            clientNotificationTimer = null;
         }
     }
 
