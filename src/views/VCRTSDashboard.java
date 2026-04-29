@@ -534,9 +534,10 @@ public class VCRTSDashboard {
                 outputStream.writeUTF(service.getCurrentUsername() != null ? service.getCurrentUsername() : "");
 
                 String ack = inputStream.readUTF();
-                refreshMonitor("Server response: " + ack + " - Pending approval...");
+                String requestId = inputStream.readUTF();
+                refreshMonitor("Server response: " + ack + " (Request ID: " + requestId + ") - Pending approval...");
                 try {
-                    service.addNotification(service.getCurrentUsername(), "Server ACK received: " + ack + " — vehicle submission pending approval.");
+                    service.addNotification(service.getCurrentUsername(), "Server ACK received (Request ID: " + requestId + ") — vehicle submission pending approval.");
                     refreshNotifications();
                 } catch (IOException ignored) {}
 
@@ -1208,9 +1209,10 @@ public class VCRTSDashboard {
             outputStream.writeUTF(service.getCurrentUsername() != null ? service.getCurrentUsername() : "");
 
             String ack = inputStream.readUTF();
-            refreshMonitor("Server response: " + ack + " - Pending approval...");
+            String requestId = inputStream.readUTF();
+            refreshMonitor("Server response: " + ack + " (Request ID: " + requestId + ") - Pending approval...");
             try {
-                service.addNotification(service.getCurrentUsername(), "Server ACK received: " + ack + " — request pending approval.");
+                service.addNotification(service.getCurrentUsername(), "Server ACK received (Request ID: " + requestId + ") — request pending approval.");
                 refreshNotifications();
             } catch (IOException ignored) {}
 
@@ -1288,9 +1290,10 @@ public class VCRTSDashboard {
             outputStream.writeUTF(service.getCurrentUsername() != null ? service.getCurrentUsername() : id);
 
             String ack = inputStream.readUTF();
-            refreshMonitor("Server response: " + ack + " - Pending approval...");
+            String requestId = inputStream.readUTF();
+            refreshMonitor("Server response: " + ack + " (Request ID: " + requestId + ") - Pending approval...");
             try {
-                service.addNotification(service.getCurrentUsername(), "Server ACK received: " + ack + " — submission pending approval.");
+                service.addNotification(service.getCurrentUsername(), "Server ACK received (Request ID: " + requestId + ") — submission pending approval.");
                 refreshNotifications();
             } catch (IOException ignored) {}
 
