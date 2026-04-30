@@ -59,11 +59,14 @@ public class ServerMain {//Philip
             String submitter = inputStream.readUTF();
             System.out.println("Request received from client \"" + submitter + "\": \"" + entry + "\"");
 
-            // Step 1: Send acknowledge back to client
-            outputStream.writeUTF("ACK");
-            System.out.println("ACK sent to client.");
-
+            // Generate request ID first so we can ship it with the ACK
             String requestId = UUID.randomUUID().toString();
+
+            // Send acknowledge + request ID back to client
+            outputStream.writeUTF("ACK");
+            outputStream.writeUTF(requestId);
+            System.out.println("ACK sent to client (requestId=" + requestId + ").");
+
             service.clearAdminDecision();
             service.writePendingRequest(requestId, entry, submitter);
             System.out.println("Pending admin review for request " + requestId);
