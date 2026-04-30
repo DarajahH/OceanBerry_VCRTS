@@ -1,4 +1,4 @@
-# 🫐 OceanBerry: VCRTS Beta Release
+# 🫐 OceanBerry: VCRTS
 
 ![Java](https://img.shields.io/badge/Java-ED8B00?style=for-the-badge&logo=java&logoColor=white)
 ![Swing](https://img.shields.io/badge/Swing-GUI-4578E6?style=for-the-badge)
@@ -11,7 +11,7 @@ VCRTS is a distributed software platform designed to bridge the gap between clie
 
 ---
 
-## ✨ What's New in OceanBerry (Beta 1.0)
+## ✨ What's New in OceanBerry (1.0)
 
 * **Refreshed UI/UX:** A brand new, dark-mode-inspired Java Swing dashboard featuring our signature "OceanBerry" blue styling, dynamic hover states, and unified role-based navigation.
 * **SQL Database Migration:** We have officially decoupled from flat-file storage. Data is now securely managed and queried via a dedicated `DatabaseService` using JDBC.
