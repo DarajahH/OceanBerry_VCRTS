@@ -27,7 +27,7 @@ java -cp 'out:flatlaf-3.7.jar' app.ServerMain
 ## Storage Modes
 
 - DB-backed mode: if the MySQL JDBC driver is on the classpath and the configured database is reachable, VCRTS reads and writes through MySQL.
-- File fallback mode: if the driver or database is unavailable, VCRTS falls back to the project text files such as `users.txt`, `jobs.txt`, `vehicles.txt`, `vcrts_log.txt`, `pending_request.txt`, `admin_decision.txt`, and `notifications.txt`.
+- File fallback mode: if the driver or database is unavailable, VCRTS falls back to the project text files such as `users.txt`, `jobs.txt`, `vehicles.txt`, `vcrts_log.txt`, `pending_request.txt`, and `notifications.txt`.
 
 ## Database
 

@@ -34,3 +34,20 @@ CREATE TABLE IF NOT EXISTS vehicles (
     vehicle_availability  VARCHAR(20) DEFAULT 'open',
     created_at            DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS logs (
+    id          INT PRIMARY KEY AUTO_INCREMENT,
+    request_id  VARCHAR(64),
+    log_type    VARCHAR(32) NOT NULL,
+    actor       VARCHAR(50),
+    message     TEXT NOT NULL,
+    created_at  DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS notifications (
+    id          INT PRIMARY KEY AUTO_INCREMENT,
+    username    VARCHAR(50) NOT NULL,
+    message     TEXT NOT NULL,
+    status      VARCHAR(20) NOT NULL DEFAULT 'UNREAD',
+    created_at  DATETIME DEFAULT CURRENT_TIMESTAMP
+);

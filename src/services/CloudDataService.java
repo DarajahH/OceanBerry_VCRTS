@@ -29,7 +29,6 @@ public class CloudDataService {
     private final Path jobPath;
     private final Path vehiclePath;
     private final Path pendingRequestPath;
-    private final Path adminDecisionPath;
     private final Path notificationsPath;
     private String currentUsername;
 
@@ -48,7 +47,6 @@ public class CloudDataService {
         this.jobPath = jobPath;
         this.vehiclePath = logPath.resolveSibling("vehicles.txt");
         this.pendingRequestPath = logPath.resolveSibling("pending_request.txt");
-        this.adminDecisionPath = logPath.resolveSibling("admin_decision.txt");
         this.notificationsPath = logPath.resolveSibling("notifications.txt");
     }
 
@@ -162,16 +160,23 @@ public class CloudDataService {
 
     public void appendJobAndLog(Job job, String logEntry) throws IOException {
         if (shouldUseDatabase()) {
+            boolean wroteJobToDatabase = false;
             try {
                 if (job != null) {
                     db.insertJob(job);
+                    wroteJobToDatabase = true;
                 }
                 if (logEntry != null && !logEntry.isBlank()) {
                     db.insertLog(logEntry);
                 }
                 return;
             } catch (SQLException e) {
-                // fall back to file
+                if (wroteJobToDatabase) {
+                    if (logEntry != null && !logEntry.isBlank()) {
+                        appendLine(logPath, logEntry);
+                    }
+                    return;
+                }
             }
         }
         if (job != null) {
@@ -325,7 +330,7 @@ public class CloudDataService {
             try { db.clearAdminDecision(); return; }
             catch (SQLException e) { /* fall back to file */ }
         }
-        clearFile(adminDecisionPath);
+        clearAdminDecisionFromLogFile(null);
     }
 
     public synchronized void clearAdminDecision(String requestId) throws IOException {
@@ -337,7 +342,7 @@ public class CloudDataService {
             try { db.clearAdminDecision(requestId); return; }
             catch (SQLException e) { /* fall back to file */ }
         }
-        removeMatchingFileLine(adminDecisionPath, requestId);
+        clearAdminDecisionFromLogFile(requestId);
     }
 
     public synchronized void addNotification(String username, String message) throws IOException {
@@ -749,35 +754,50 @@ public class CloudDataService {
     }
 
     private void writeAdminDecisionToFile(String requestId, String decision) throws IOException {
-        List<String> updated = new ArrayList<>();
-        boolean replaced = false;
-        for (String line : readLines(adminDecisionPath)) {
-            String[] parts = line.split(JOB_FIELD_DELIMITER, 2);
-            if (parts.length >= 1 && parts[0].equals(requestId)) {
-                updated.add(String.join(JOB_FIELD_DELIMITER, requestId, decision));
-                replaced = true;
-            } else {
-                updated.add(line);
-            }
-        }
-        if (!replaced) {
-            updated.add(String.join(JOB_FIELD_DELIMITER, requestId, decision));
-        }
-        Files.write(adminDecisionPath, updated, StandardCharsets.UTF_8,
-            StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+        appendLine(logPath, serializeAdminDecisionEntry(requestId, decision));
     }
 
     private String readAdminDecisionFromFile(String requestId) throws IOException {
-        for (String line : readLines(adminDecisionPath)) {
-            String[] parts = line.split(JOB_FIELD_DELIMITER, 2);
-            if (parts.length < 2) {
-                continue;
-            }
-            if (requestId != null && !requestId.isBlank() && requestId.equals(parts[0])) {
-                return parts[1];
+        List<String> lines = readLines(logPath);
+        for (int i = lines.size() - 1; i >= 0; i--) {
+            String decision = parseAdminDecisionEntry(lines.get(i), requestId);
+            if (decision != null) {
+                return decision;
             }
         }
         return "";
+    }
+
+    private void clearAdminDecisionFromLogFile(String requestId) throws IOException {
+        List<String> updated = new ArrayList<>();
+        for (String line : readLines(logPath)) {
+            if (parseAdminDecisionEntry(line, requestId) != null) {
+                continue;
+            }
+            updated.add(line);
+        }
+        Files.write(logPath, updated, StandardCharsets.UTF_8,
+            StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+    }
+
+    private String serializeAdminDecisionEntry(String requestId, String decision) {
+        return String.join(
+            JOB_FIELD_DELIMITER,
+            "ADMIN_DECISION",
+            safeFileValue(requestId),
+            safeFileValue(decision)
+        );
+    }
+
+    private String parseAdminDecisionEntry(String line, String requestId) {
+        String[] parts = line.split(JOB_FIELD_DELIMITER, 3);
+        if (parts.length < 3 || !"ADMIN_DECISION".equals(parts[0])) {
+            return null;
+        }
+        if (requestId == null || requestId.isBlank() || requestId.equals(parts[1])) {
+            return parts[2];
+        }
+        return null;
     }
 
     private List<String> getUnreadNotificationsFromFile(String username) throws IOException {
