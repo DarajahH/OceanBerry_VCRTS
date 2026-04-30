@@ -9,6 +9,7 @@ public class Job {
     private static final Set<String> jobIdSet = new HashSet<>();
 
     private final String jobId;
+    private final String submitterId;
     private final String description;
     private final int duration;
     private final LocalDateTime arrivalTime;
@@ -26,11 +27,12 @@ public class Job {
         JobStatus status,
         Integer completionTime
     ) {
-        this(jobId, description, duration, arrivalTime, deadline, status, completionTime, null);
+        this(jobId, null, description, duration, arrivalTime, deadline, status, completionTime, null);
     }
 
     public Job(
         String jobId,
+        String submitterId,
         String description,
         int duration,
         LocalDateTime arrivalTime,
@@ -40,6 +42,7 @@ public class Job {
         String vehicleId
     ) {
         this.jobId = jobId;
+        this.submitterId = submitterId;
         this.description = description;
         this.duration = duration;
         this.arrivalTime = arrivalTime;
@@ -62,6 +65,7 @@ public class Job {
 
         Job createdJob = new Job(
             jobId,
+            null,
             description,
             duration,
             arrivalTime,
@@ -88,6 +92,35 @@ public class Job {
 
         Job createdJob = new Job(
             jobId,
+            null,
+            description,
+            duration,
+            arrivalTime,
+            deadline,
+            JobStatus.QUEUED,
+            null,
+            vehicleId
+        );
+        jobIdSet.add(jobId);
+        return createdJob;
+    }
+
+    public static Job createJob(
+        String jobId,
+        String submitterId,
+        String description,
+        int duration,
+        LocalDateTime arrivalTime,
+        LocalDateTime deadline,
+        String vehicleId
+    ) {
+        if (jobIdSet.contains(jobId)) {
+            throw new IllegalArgumentException("Job Id invalid because it already exists.");
+        }
+
+        Job createdJob = new Job(
+            jobId,
+            submitterId,
             description,
             duration,
             arrivalTime,
@@ -112,6 +145,10 @@ public class Job {
 
     public String getDescription() {
         return description;
+    }
+
+    public String getSubmitterId() {
+        return submitterId;
     }
 
     public int getDuration() {

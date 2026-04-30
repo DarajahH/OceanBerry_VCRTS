@@ -1,8 +1,6 @@
--- Create a database for the VCRTS project for Milestone 6
 CREATE DATABASE IF NOT EXISTS vcrts_db;
 USE vcrts_db;
 
--- Users table (replaces users.txt)
 CREATE TABLE IF NOT EXISTS users (
     id          INT PRIMARY KEY AUTO_INCREMENT,
     username    VARCHAR(50) NOT NULL UNIQUE,
@@ -11,26 +9,24 @@ CREATE TABLE IF NOT EXISTS users (
     created_at  DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- Table for client job submissions (ROLE: CLIENT)
--- job_id is the user-provided Client ID (matches existing Job model behavior)
 CREATE TABLE IF NOT EXISTS jobs (
-    job_id          INT PRIMARY KEY,
+    job_id          VARCHAR(50) PRIMARY KEY,
+    submitter_id    VARCHAR(50),
     description     VARCHAR(255) NOT NULL,
     duration_hours  INT NOT NULL,
     arrival_time    DATETIME,
     deadline_time   DATETIME,
     jobStatus       ENUM('QUEUED', 'IN_PROGRESS', 'COMPLETED', 'REJECTED') DEFAULT 'QUEUED',
-    completionTime  INT
+    completionTime  INT,
+    vehicle_id      VARCHAR(50)
 );
 
--- Table for vehicle owner submissions (ROLE: OWNER)
--- owner_id is the user-provided Owner ID from the form (not FK to users.id)
 CREATE TABLE IF NOT EXISTS vehicles (
-    vehicle_id            INT PRIMARY KEY AUTO_INCREMENT,
-    owner_id              INT,
-    vehicle_info          VARCHAR(255) NOT NULL,
-    residency_hours       INT NOT NULL,
+    vehicle_id            VARCHAR(50) PRIMARY KEY,
+    owner_id              VARCHAR(50),
+    vehicle_info          VARCHAR(255),
+    residency_hours       INT NOT NULL DEFAULT 0,
     vehicle_status        VARCHAR(50) DEFAULT 'IDLE',
-    vehicle_availability  BOOLEAN DEFAULT TRUE,
+    vehicle_availability  VARCHAR(20) DEFAULT 'open',
     created_at            DATETIME DEFAULT CURRENT_TIMESTAMP
 );
