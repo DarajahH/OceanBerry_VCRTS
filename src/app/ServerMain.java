@@ -92,10 +92,14 @@ public class ServerMain {//Philip
                     } else if ("VEHICLE_OWNER".equals(role)) {
                         String ownerId = firstNonBlank(parseField(entry, "ID"), submitter);
                         String vehicleId = firstNonBlank(parseField(entry, "VEHICLE"), parseField(entry, "INFO"));
-                        int residencyHours = parseInteger(firstNonBlank(parseField(entry, "RESIDENCY"), parseField(entry, "DURATION")), 0);
+                        Integer residencyHours = parseOptionalInteger(firstNonBlank(parseField(entry, "RESIDENCY"), parseField(entry, "DURATION")));
+                        String model = parseField(entry, "MODEL");
+                        String vin = parseField(entry, "VIN");
+                        String make = parseField(entry, "MAKE");
+                        String year = parseField(entry, "YEAR");
                         String status = firstNonBlank(parseField(entry, "STATUS"), "IDLE");
                         String availability = firstNonBlank(parseField(entry, "AVAILABILITY"), "open");
-                        service.appendVehicle(ownerId, vehicleId, residencyHours, status, availability);
+                        service.appendVehicle(ownerId, vehicleId, model, vin, make, year, residencyHours, status, availability);
                         service.appendLog(entry);
                     } else {
                         service.appendLog(entry);
@@ -170,6 +174,17 @@ public class ServerMain {//Philip
             return Integer.parseInt(value);
         } catch (NumberFormatException e) {
             return fallback;
+        }
+    }
+
+    private static Integer parseOptionalInteger(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return Integer.parseInt(value);
+        } catch (NumberFormatException e) {
+            return null;
         }
     }
 

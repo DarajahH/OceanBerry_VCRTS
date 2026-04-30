@@ -204,12 +204,65 @@ public class CloudDataService {
         return clientJobs;
     }
 
-    public void appendVehicle(String ownerId, String vehicleInfo, int residencyHours, String status, String availability) throws IOException {
+    public void appendVehicle(
+        String ownerId,
+        String vehicleId,
+        String model,
+        String vin,
+        String make,
+        String year,
+        Integer residencyHours,
+        String status,
+        String availability
+    ) throws IOException {
+        Map<String, String> existing = findExistingVehicleRecord(vehicleId);
+        String resolvedOwnerId = firstNonBlank(ownerId, existing.get("OWNER_ID"), "");
+        String resolvedVehicleId = firstNonBlank(vehicleId, existing.get("VEHICLE_ID"), "");
+        String resolvedModel = firstNonBlank(model, existing.get("MODEL"), "");
+        String resolvedVin = firstNonBlank(vin, existing.get("VIN"), "");
+        String resolvedMake = firstNonBlank(make, existing.get("MAKE"), "");
+        String resolvedYear = firstNonBlank(year, existing.get("YEAR"), "");
+        int resolvedResidencyHours = residencyHours != null
+            ? Math.max(residencyHours, 0)
+            : parseInteger(firstNonBlank(existing.get("RESIDENCY_HOURS"), "0", "0"), 0);
+        String resolvedStatus = firstNonBlank(status, existing.get("STATUS"), "IDLE");
+        String resolvedAvailability = firstNonBlank(availability, existing.get("AVAILABILITY"), "open");
+        String resolvedVehicleInfo = composeVehicleInfo(
+            resolvedVehicleId,
+            resolvedMake,
+            resolvedModel,
+            resolvedYear,
+            resolvedVin
+        );
+
         if (databaseReady) {
-            try { db.insertVehicle(ownerId, vehicleInfo, residencyHours, status, availability); return; }
-            catch (SQLException e) { /* fall back to file */ }
+            try {
+                db.insertVehicle(
+                    resolvedOwnerId,
+                    resolvedVehicleId,
+                    resolvedVehicleInfo,
+                    resolvedModel,
+                    resolvedVin,
+                    resolvedMake,
+                    resolvedYear,
+                    resolvedResidencyHours,
+                    resolvedStatus,
+                    resolvedAvailability
+                );
+                return;
+            } catch (SQLException e) { /* fall back to file */ }
         }
-        writeVehicleToFile(ownerId, vehicleInfo, residencyHours, status, availability);
+        writeVehicleToFile(
+            resolvedOwnerId,
+            resolvedVehicleId,
+            resolvedModel,
+            resolvedVin,
+            resolvedMake,
+            resolvedYear,
+            resolvedResidencyHours,
+            resolvedStatus,
+            resolvedAvailability
+        );
     }
 
     public synchronized void writePendingRequest(String requestId, String entry, String submitter) throws IOException {
@@ -514,7 +567,17 @@ public class CloudDataService {
                 vehicle = new LinkedHashMap<>();
                 vehicle.put("VEHICLE_ID", vehicleId);
                 vehicle.put("OWNER_ID", safeValue(record.get("ID")));
-                vehicle.put("VEHICLE_INFO", safeValue(record.get("INFO")));
+                vehicle.put("MODEL", safeValue(record.get("MODEL")));
+                vehicle.put("VIN", safeValue(record.get("VIN")));
+                vehicle.put("MAKE", safeValue(record.get("MAKE")));
+                vehicle.put("YEAR", safeValue(record.get("YEAR")));
+                vehicle.put("VEHICLE_INFO", composeVehicleInfo(
+                    vehicleId,
+                    safeFileValue(record.get("MAKE")),
+                    safeFileValue(record.get("MODEL")),
+                    safeFileValue(record.get("YEAR")),
+                    safeFileValue(record.get("VIN"))
+                ));
                 vehicle.put("RESIDENCY_HOURS", firstNonBlank(record.get("RESIDENCY"), record.get("DURATION"), "0"));
                 vehicle.put("STATUS", safeValue(record.get("STATUS")));
                 vehicle.put("AVAILABILITY", safeValue(record.get("AVAILABILITY")));
@@ -529,6 +592,18 @@ public class CloudDataService {
                 if (!safeValue(record.get("AVAILABILITY")).equals("N/A")) {
                     vehicle.put("AVAILABILITY", safeValue(record.get("AVAILABILITY")));
                 }
+                if (!safeValue(record.get("MODEL")).equals("N/A")) {
+                    vehicle.put("MODEL", safeValue(record.get("MODEL")));
+                }
+                if (!safeValue(record.get("VIN")).equals("N/A")) {
+                    vehicle.put("VIN", safeValue(record.get("VIN")));
+                }
+                if (!safeValue(record.get("MAKE")).equals("N/A")) {
+                    vehicle.put("MAKE", safeValue(record.get("MAKE")));
+                }
+                if (!safeValue(record.get("YEAR")).equals("N/A")) {
+                    vehicle.put("YEAR", safeValue(record.get("YEAR")));
+                }
                 if (!safeValue(record.get("INFO")).equals("N/A")) {
                     vehicle.put("VEHICLE_INFO", safeValue(record.get("INFO")));
                 }
@@ -537,12 +612,29 @@ public class CloudDataService {
                     vehicle.put("RESIDENCY_HOURS", residency);
                 }
             }
+            vehicle.put("VEHICLE_INFO", composeVehicleInfo(
+                safeFileValue(vehicle.get("VEHICLE_ID")),
+                safeFileValue(vehicle.get("MAKE")),
+                safeFileValue(vehicle.get("MODEL")),
+                safeFileValue(vehicle.get("YEAR")),
+                safeFileValue(vehicle.get("VIN"))
+            ));
         }
 
         return new ArrayList<>(vehicles.values());
     }
 
-    private void writeVehicleToFile(String ownerId, String vehicleId, int residencyHours, String status, String availability)
+    private void writeVehicleToFile(
+        String ownerId,
+        String vehicleId,
+        String model,
+        String vin,
+        String make,
+        String year,
+        int residencyHours,
+        String status,
+        String availability
+    )
         throws IOException {
         List<String> updated = new ArrayList<>();
         boolean replaced = false;
@@ -553,6 +645,10 @@ public class CloudDataService {
                     JOB_FIELD_DELIMITER,
                     safeFileValue(vehicleId),
                     safeFileValue(ownerId),
+                    safeFileValue(model),
+                    safeFileValue(vin),
+                    safeFileValue(make),
+                    safeFileValue(year),
                     Integer.toString(Math.max(residencyHours, 0)),
                     safeFileValue(status),
                     safeFileValue(availability)
@@ -567,6 +663,10 @@ public class CloudDataService {
                 JOB_FIELD_DELIMITER,
                 safeFileValue(vehicleId),
                 safeFileValue(ownerId),
+                safeFileValue(model),
+                safeFileValue(vin),
+                safeFileValue(make),
+                safeFileValue(year),
                 Integer.toString(Math.max(residencyHours, 0)),
                 safeFileValue(status),
                 safeFileValue(availability)
@@ -589,10 +689,30 @@ public class CloudDataService {
             Map<String, String> record = new LinkedHashMap<>();
             record.put("VEHICLE_ID", safeValue(parts[0]));
             record.put("OWNER_ID", safeValue(parts[1]));
-            record.put("RESIDENCY_HOURS", safeValue(parts[2]));
-            record.put("STATUS", safeValue(parts[3]));
-            record.put("AVAILABILITY", safeValue(parts[4]));
-            record.put("VEHICLE_INFO", safeValue(parts[0]));
+            if (parts.length >= 9) {
+                record.put("MODEL", safeValue(parts[2]));
+                record.put("VIN", safeValue(parts[3]));
+                record.put("MAKE", safeValue(parts[4]));
+                record.put("YEAR", safeValue(parts[5]));
+                record.put("RESIDENCY_HOURS", safeValue(parts[6]));
+                record.put("STATUS", safeValue(parts[7]));
+                record.put("AVAILABILITY", safeValue(parts[8]));
+            } else {
+                record.put("MODEL", "N/A");
+                record.put("VIN", "N/A");
+                record.put("MAKE", "N/A");
+                record.put("YEAR", "N/A");
+                record.put("RESIDENCY_HOURS", safeValue(parts[2]));
+                record.put("STATUS", safeValue(parts[3]));
+                record.put("AVAILABILITY", safeValue(parts[4]));
+            }
+            record.put("VEHICLE_INFO", composeVehicleInfo(
+                safeFileValue(record.get("VEHICLE_ID")),
+                safeFileValue(record.get("MAKE")),
+                safeFileValue(record.get("MODEL")),
+                safeFileValue(record.get("YEAR")),
+                safeFileValue(record.get("VIN"))
+            ));
             vehicles.add(record);
         }
         return vehicles;
@@ -706,6 +826,46 @@ public class CloudDataService {
             return second.trim();
         }
         return fallback;
+    }
+
+    private int parseInteger(String value, int fallback) {
+        try {
+            return Integer.parseInt(value);
+        } catch (NumberFormatException e) {
+            return fallback;
+        }
+    }
+
+    private Map<String, String> findExistingVehicleRecord(String vehicleId) throws IOException {
+        if (vehicleId == null || vehicleId.isBlank()) {
+            return Collections.emptyMap();
+        }
+        for (Map<String, String> record : readAllVehicles()) {
+            if (vehicleId.trim().equals(safeFileValue(record.get("VEHICLE_ID")))) {
+                return record;
+            }
+        }
+        return Collections.emptyMap();
+    }
+
+    private String composeVehicleInfo(String vehicleId, String make, String model, String year, String vin) {
+        List<String> segments = new ArrayList<>();
+        if (make != null && !make.isBlank()) {
+            segments.add(make.trim());
+        }
+        if (model != null && !model.isBlank()) {
+            segments.add(model.trim());
+        }
+        if (year != null && !year.isBlank()) {
+            segments.add(year.trim());
+        }
+        if (vin != null && !vin.isBlank()) {
+            segments.add("VIN " + vin.trim());
+        }
+        if (!segments.isEmpty()) {
+            return String.join(" ", segments);
+        }
+        return safeFileValue(vehicleId);
     }
 
     private Map<String, String> toJobRecord(Job job) {

@@ -602,11 +602,34 @@ public class VCRTSDashboard {
 
         JLabel ownerLabel = createWhiteLabel("Owner");
         JTextField ownerIdField = new JTextField();
+        String currentUsername = service.getCurrentUsername();
+        if (currentUsername != null && !currentUsername.isBlank()) {
+            ownerIdField.setText(currentUsername);
+            if (isOwnerUser()) {
+                ownerIdField.setEditable(false);
+            }
+        }
         styleTextField(ownerIdField);
 
-        JLabel vehicleLabel = createWhiteLabel("Vehicle");
-        JTextField vehicleInfoField = new JTextField();
-        styleTextField(vehicleInfoField);
+        JLabel vehicleLabel = createWhiteLabel("Vehicle ID");
+        JTextField vehicleIdField = new JTextField();
+        styleTextField(vehicleIdField);
+
+        JLabel makeLabel = createWhiteLabel("Make");
+        JTextField makeField = new JTextField();
+        styleTextField(makeField);
+
+        JLabel modelLabel = createWhiteLabel("Model");
+        JTextField modelField = new JTextField();
+        styleTextField(modelField);
+
+        JLabel yearLabel = createWhiteLabel("Year");
+        JTextField yearField = new JTextField();
+        styleTextField(yearField);
+
+        JLabel vinLabel = createWhiteLabel("VIN");
+        JTextField vinField = new JTextField();
+        styleTextField(vinField);
 
         JLabel residencyLabel = createWhiteLabel("Residency Hours");
         JTextField residencyField = new JTextField();
@@ -626,7 +649,17 @@ public class VCRTSDashboard {
             createFormFieldRow(residencyLabel, residencyField)
         ));
         formPanel.add(Box.createVerticalStrut(12));
-        formPanel.add(createFormFieldRow(vehicleLabel, vehicleInfoField));
+        formPanel.add(createInlineFormRow(
+            createFormFieldRow(vehicleLabel, vehicleIdField),
+            createFormFieldRow(vinLabel, vinField)
+        ));
+        formPanel.add(Box.createVerticalStrut(12));
+        formPanel.add(createInlineFormRow(
+            createFormFieldRow(makeLabel, makeField),
+            createFormFieldRow(modelLabel, modelField)
+        ));
+        formPanel.add(Box.createVerticalStrut(12));
+        formPanel.add(createFormFieldRow(yearLabel, yearField));
         formPanel.add(Box.createVerticalStrut(12));
         formPanel.add(createInlineFormRow(
             createFormFieldRow(statusLabel, statusBox),
@@ -634,22 +667,32 @@ public class VCRTSDashboard {
         ));
         formPanel.add(Box.createVerticalStrut(16));
 
-        JButton submitBtn = new JButton("Submit Vehicle to VC");
+        JButton submitBtn = new JButton("Register Vehicle");
         stylePrimaryButton(submitBtn);
         submitBtn.addActionListener(e -> {
             String ownerId = ownerIdField.getText().trim();
-            String vehicleInfo = vehicleInfoField.getText().trim();
+            String vehicleId = vehicleIdField.getText().trim();
+            String make = makeField.getText().trim();
+            String model = modelField.getText().trim();
+            String year = yearField.getText().trim();
+            String vin = vinField.getText().trim();
             String residency = residencyField.getText().trim();
             String status = (String) statusBox.getSelectedItem();
             String isAvailable = (String) availabilityBox.getSelectedItem();
 
-            if (ownerId.isEmpty() || vehicleInfo.isEmpty() || residency.isEmpty() || status.isEmpty()) {
+            if (ownerId.isEmpty() || vehicleId.isEmpty() || make.isEmpty() || model.isEmpty()
+                    || year.isEmpty() || vin.isEmpty() || residency.isEmpty() || status.isEmpty()) {
                 showFeedback("Please complete all vehicle fields.", DANGER, 4200);
                 return;
             }
 
             if (!ownerId.matches("\\d+")) {
                 showFeedback("Owner ID must be numeric.", WARNING, 4200);
+                return;
+            }
+
+            if (!year.matches("\\d{4}")) {
+                showFeedback("Year must use four digits.", WARNING, 4200);
                 return;
             }
 
@@ -662,10 +705,14 @@ public class VCRTSDashboard {
             }
 
             String entry = String.format(
-                "[%s] ROLE:VEHICLE_OWNER | ID:%s | INFO:%s | RESIDENCY:%d | STATUS:%s | AVAILABILITY:%s",
+                "[%s] ROLE:VEHICLE_OWNER | ID:%s | VEHICLE:%s | MAKE:%s | MODEL:%s | YEAR:%s | VIN:%s | RESIDENCY:%d | STATUS:%s | AVAILABILITY:%s",
                 dtf.format(LocalDateTime.now()),
                 ownerId,
-                vehicleInfo,
+                vehicleId,
+                make,
+                model,
+                year,
+                vin,
                 residencyHours,
                 status,
                 isAvailable
@@ -692,7 +739,11 @@ public class VCRTSDashboard {
                 showFeedback("Vehicle submission sent for admin review.", SUCCESS, 4200);
 
                 ownerIdField.setText("");
-                vehicleInfoField.setText("");
+                vehicleIdField.setText("");
+                makeField.setText("");
+                modelField.setText("");
+                yearField.setText("");
+                vinField.setText("");
                 residencyField.setText("");
                 statusBox.setSelectedIndex(0);
                 availabilityBox.setSelectedIndex(0);
@@ -839,7 +890,7 @@ public class VCRTSDashboard {
         );
     }
 
-    private JPanel createVehicleOwnerScreen(CloudDataService service) {//DH
+    private JComponent createVehicleStatusUpdateForm(CloudDataService service) {
         JPanel formPanel = createFormStack();
 
         JLabel ownerLabel = createWhiteLabel("Owner");
@@ -888,12 +939,25 @@ public class VCRTSDashboard {
         });
         formPanel.add(createFullWidthButton(submitBtn));
 
+        return wrapFormPanel(formPanel);
+    }
+
+    private JPanel createVehicleOwnerScreen(CloudDataService service) {//DH
+        JTabbedPane tabbedPane = new JTabbedPane();
+        tabbedPane.setOpaque(false);
+        tabbedPane.setFont(new Font("Dialog", Font.BOLD, 13));
+        tabbedPane.setBackground(SURFACE_BG);
+        tabbedPane.setForeground(TEXT_PRIMARY);
+        tabbedPane.setBorder(BorderFactory.createEmptyBorder());
+        tabbedPane.addTab("Register Vehicle", createVehicleSubmissionTab(service));
+        tabbedPane.addTab("Update Status", createVehicleStatusUpdateForm(service));
+
         JPanel body = new JPanel(new GridLayout(0, 1, 0, 18));
         body.setOpaque(false);
         body.add(createSurfaceCard(
-            "Vehicle Status",
+            "Vehicle",
             "",
-            wrapFormPanel(formPanel)
+            tabbedPane
         ));
 
         return createDashboardPage(
@@ -1588,10 +1652,10 @@ public class VCRTSDashboard {
                     continue;
                 }
 
-                String vehicleInfo = safeValue(vehicle.get("VEHICLE_INFO"));
                 String label = "Vehicle " + vehicleId;
-                if (!vehicleInfo.isBlank() && !"N/A".equals(vehicleInfo)) {
-                    label += " - " + vehicleInfo;
+                String summary = buildVehicleSummary(vehicle);
+                if (!summary.isBlank()) {
+                    label += " - " + summary;
                 }
                 choices.add(new VehicleChoice(vehicleId, label));
             }
@@ -1775,6 +1839,10 @@ public class VCRTSDashboard {
 
     private static final class VehicleSnapshot {
         private final String vehicleId;
+        private String make = "N/A";
+        private String model = "N/A";
+        private String year = "N/A";
+        private String vin = "N/A";
         private String status = "N/A";
         private String availability = "N/A";
         private int updateCount = 0;
@@ -1786,6 +1854,10 @@ public class VCRTSDashboard {
 
         private void update(Map<String, String> record) {
             updateCount++;
+            make = safeValueStatic(record.get("MAKE"));
+            model = safeValueStatic(record.get("MODEL"));
+            year = safeValueStatic(record.get("YEAR"));
+            vin = safeValueStatic(record.get("VIN"));
             status = safeValueStatic(record.get("STATUS"));
             availability = safeValueStatic(record.get("AVAILABILITY"));
             lastTimestamp = safeValueStatic(record.get("TIMESTAMP"));
@@ -1794,6 +1866,41 @@ public class VCRTSDashboard {
         private static String safeValueStatic(String value) {
             return value == null || value.isBlank() ? "N/A" : value;
         }
+    }
+
+    private String buildVehicleSummary(Map<String, String> vehicle) {
+        List<String> parts = new ArrayList<>();
+        String year = safeFileText(vehicle.get("YEAR"));
+        String make = safeFileText(vehicle.get("MAKE"));
+        String model = safeFileText(vehicle.get("MODEL"));
+        String vin = safeFileText(vehicle.get("VIN"));
+
+        if (!year.isBlank()) {
+            parts.add(year);
+        }
+        if (!make.isBlank()) {
+            parts.add(make);
+        }
+        if (!model.isBlank()) {
+            parts.add(model);
+        }
+        if (!vin.isBlank()) {
+            parts.add("VIN " + vin);
+        }
+
+        if (!parts.isEmpty()) {
+            return String.join(" ", parts);
+        }
+
+        String fallback = safeValue(vehicle.get("VEHICLE_INFO"));
+        return "N/A".equals(fallback) ? "" : fallback;
+    }
+
+    private String safeFileText(String value) {
+        if (value == null || value.isBlank() || "N/A".equalsIgnoreCase(value)) {
+            return "";
+        }
+        return value.trim();
     }
 
     private void adjustFields() {
@@ -2032,7 +2139,7 @@ public class VCRTSDashboard {
     }
 
     private JPanel createOwnerVehiclePanel() {
-        String[] columns = {"Vehicle", "Activity", "Availability", "Updates", "Last Update"};
+        String[] columns = {"Vehicle", "Make", "Model", "Year", "VIN", "Status", "Availability", "Updates", "Last Update"};
         ownerVehicleModel = new DefaultTableModel(columns, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
@@ -2047,13 +2154,21 @@ public class VCRTSDashboard {
         ownerVehicleTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
 
         TableColumn vehicleCol = ownerVehicleTable.getColumnModel().getColumn(0);
-        TableColumn activityCol = ownerVehicleTable.getColumnModel().getColumn(1);
-        TableColumn availabilityCol = ownerVehicleTable.getColumnModel().getColumn(2);
-        TableColumn updatesCol = ownerVehicleTable.getColumnModel().getColumn(3);
-        TableColumn lastUpdateCol = ownerVehicleTable.getColumnModel().getColumn(4);
+        TableColumn makeCol = ownerVehicleTable.getColumnModel().getColumn(1);
+        TableColumn modelCol = ownerVehicleTable.getColumnModel().getColumn(2);
+        TableColumn yearCol = ownerVehicleTable.getColumnModel().getColumn(3);
+        TableColumn vinCol = ownerVehicleTable.getColumnModel().getColumn(4);
+        TableColumn statusCol = ownerVehicleTable.getColumnModel().getColumn(5);
+        TableColumn availabilityCol = ownerVehicleTable.getColumnModel().getColumn(6);
+        TableColumn updatesCol = ownerVehicleTable.getColumnModel().getColumn(7);
+        TableColumn lastUpdateCol = ownerVehicleTable.getColumnModel().getColumn(8);
         vehicleCol.setPreferredWidth(180);
-        activityCol.setPreferredWidth(200);
-        availabilityCol.setPreferredWidth(140);
+        makeCol.setPreferredWidth(140);
+        modelCol.setPreferredWidth(140);
+        yearCol.setPreferredWidth(90);
+        vinCol.setPreferredWidth(180);
+        statusCol.setPreferredWidth(140);
+        availabilityCol.setPreferredWidth(120);
         updatesCol.setPreferredWidth(90);
         lastUpdateCol.setPreferredWidth(210);
 
@@ -2148,6 +2263,10 @@ public class VCRTSDashboard {
             for (VehicleSnapshot vehicle : vehicles.values()) {
                 ownerVehicleModel.addRow(new Object[] {
                     vehicle.vehicleId,
+                    vehicle.make,
+                    vehicle.model,
+                    vehicle.year,
+                    vehicle.vin,
                     vehicle.status,
                     vehicle.availability,
                     vehicle.updateCount,

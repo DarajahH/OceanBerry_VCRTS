@@ -142,7 +142,7 @@ public class DatabaseService {
     }
 
     public List<java.util.Map<String, String>> getAllVehicles() throws SQLException {
-        String sql = "SELECT vehicle_id, owner_id, vehicle_info, residency_hours, vehicle_status, vehicle_availability FROM vehicles ORDER BY vehicle_id ASC";
+        String sql = "SELECT vehicle_id, owner_id, vehicle_info, vehicle_model, vehicle_vin, vehicle_make, vehicle_year, residency_hours, vehicle_status, vehicle_availability FROM vehicles ORDER BY vehicle_id ASC";
         List<java.util.Map<String, String>> vehicles = new ArrayList<>();
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql);
@@ -152,6 +152,10 @@ public class DatabaseService {
                 record.put("VEHICLE_ID", rs.getString("vehicle_id"));
                 record.put("OWNER_ID", rs.getString("owner_id"));
                 record.put("VEHICLE_INFO", rs.getString("vehicle_info"));
+                record.put("MODEL", rs.getString("vehicle_model"));
+                record.put("VIN", rs.getString("vehicle_vin"));
+                record.put("MAKE", rs.getString("vehicle_make"));
+                record.put("YEAR", rs.getString("vehicle_year"));
                 record.put("RESIDENCY_HOURS", String.valueOf(rs.getInt("residency_hours")));
                 record.put("STATUS", rs.getString("vehicle_status"));
                 record.put("AVAILABILITY", rs.getString("vehicle_availability"));
@@ -180,17 +184,32 @@ public class DatabaseService {
     }
 
     // Insert a new vehicle submission into the vehicles table
-    public void insertVehicle(String ownerId, String vehicleInfo, int residencyHours, String status, String availability) throws SQLException {
-        String sql = "REPLACE INTO vehicles (vehicle_id, owner_id, vehicle_info, residency_hours, vehicle_status, vehicle_availability) "
-                   + "VALUES (?, ?, ?, ?, ?, ?)";
+    public void insertVehicle(
+        String ownerId,
+        String vehicleId,
+        String vehicleInfo,
+        String model,
+        String vin,
+        String make,
+        String year,
+        int residencyHours,
+        String status,
+        String availability
+    ) throws SQLException {
+        String sql = "REPLACE INTO vehicles (vehicle_id, owner_id, vehicle_info, vehicle_model, vehicle_vin, vehicle_make, vehicle_year, residency_hours, vehicle_status, vehicle_availability) "
+                   + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setString(1, vehicleInfo);
+            pstmt.setString(1, vehicleId);
             pstmt.setString(2, ownerId);
             pstmt.setString(3, vehicleInfo);
-            pstmt.setInt(4, Math.max(residencyHours, 0));
-            pstmt.setString(5, status);
-            pstmt.setString(6, availability);
+            pstmt.setString(4, model);
+            pstmt.setString(5, vin);
+            pstmt.setString(6, make);
+            pstmt.setString(7, year);
+            pstmt.setInt(8, Math.max(residencyHours, 0));
+            pstmt.setString(9, status);
+            pstmt.setString(10, availability);
             pstmt.executeUpdate();
         }
     }
