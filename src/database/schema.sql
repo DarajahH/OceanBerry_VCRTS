@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS jobs (
     jobStatus       ENUM('QUEUED', 'IN_PROGRESS', 'COMPLETED', 'REJECTED') DEFAULT 'QUEUED',
     completionTime  INT,
     vehicle_id      VARCHAR(50),
-    created_at            DATETIME DEFAULT CURRENT_TIMESTAMP
+    created_at      DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS vehicles (
@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS vehicles (
     owner_id              VARCHAR(50),
     vehicle_info          VARCHAR(255),
     vehicle_model         VARCHAR(100),
-    vehicle_vin           VARCHAR(100),
+    vehicle_vin           VARCHAR(17),
     vehicle_make          VARCHAR(100),
     vehicle_year          VARCHAR(20),
     residency_hours       INT NOT NULL DEFAULT 0,
