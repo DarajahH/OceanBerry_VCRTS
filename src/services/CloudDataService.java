@@ -1,7 +1,7 @@
 package services;
 
-import database.DatabaseConnection;
 import database.DatabaseService;
+import database.DatabaseConnection;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -27,6 +27,7 @@ public class CloudDataService {
     private final Path logPath;
     private final Path userPath;
     private final Path jobPath;
+    private final Path vehiclePath;
     private final Path pendingRequestPath;
     private final Path adminDecisionPath;
     private final Path notificationsPath;
@@ -46,6 +47,7 @@ public class CloudDataService {
         this.logPath = logPath;
         this.userPath = userPath;
         this.jobPath = jobPath;
+        this.vehiclePath = logPath.resolveSibling("vehicles.txt");
         this.pendingRequestPath = logPath.resolveSibling("pending_request.txt");
         this.adminDecisionPath = logPath.resolveSibling("admin_decision.txt");
         this.notificationsPath = logPath.resolveSibling("notifications.txt");
@@ -196,11 +198,8 @@ public class CloudDataService {
 
     public List<Map<String, String>> readClientJobRecords() throws IOException {
         List<Map<String, String>> clientJobs = new ArrayList<>();
-        for (String line : readAllLogs()) {
-            Map<String, String> parsedLine = parseLogEntry(line);
-            if ("CLIENT".equals(parsedLine.get("ROLE"))) {
-                clientJobs.add(parsedLine);
-            }
+        for (Job job : readJobs()) {
+            clientJobs.add(toJobRecord(job));
         }
         return clientJobs;
     }
@@ -210,14 +209,7 @@ public class CloudDataService {
             try { db.insertVehicle(ownerId, vehicleInfo, residencyHours, status, availability); return; }
             catch (SQLException e) { /* fall back to file */ }
         }
-        String entry = String.format("[%s] ROLE:VEHICLE_OWNER | ID:%s | VEHICLE:%s | RESIDENCY:%d | STATUS:%s | AVAILABILITY:%s",
-            LocalDateTime.now().toString(),
-            safeFileValue(ownerId),
-            safeFileValue(vehicleInfo),
-            residencyHours,
-            safeFileValue(status),
-            safeFileValue(availability));
-        appendLine(logPath, entry);
+        writeVehicleToFile(ownerId, vehicleInfo, residencyHours, status, availability);
     }
 
     public synchronized void writePendingRequest(String requestId, String entry, String submitter) throws IOException {
@@ -260,12 +252,37 @@ public class CloudDataService {
         }
         clearFile(pendingRequestPath);
     }
+
+    public synchronized void clearPendingRequest(String requestId) throws IOException {
+        if (requestId == null || requestId.isBlank()) {
+            clearPendingRequest();
+            return;
+        }
+        if (databaseReady) {
+            try { db.clearPendingRequest(requestId); return; }
+            catch (SQLException e) { /* fall back to file */ }
+        }
+        removeMatchingFileLine(pendingRequestPath, requestId);
+    }
+
     public synchronized void clearAdminDecision() throws IOException {
         if (databaseReady) {
             try { db.clearAdminDecision(); return; }
             catch (SQLException e) { /* fall back to file */ }
         }
         clearFile(adminDecisionPath);
+    }
+
+    public synchronized void clearAdminDecision(String requestId) throws IOException {
+        if (requestId == null || requestId.isBlank()) {
+            clearAdminDecision();
+            return;
+        }
+        if (databaseReady) {
+            try { db.clearAdminDecision(requestId); return; }
+            catch (SQLException e) { /* fall back to file */ }
+        }
+        removeMatchingFileLine(adminDecisionPath, requestId);
     }
 
     public synchronized void addNotification(String username, String message) throws IOException {
@@ -316,6 +333,19 @@ public class CloudDataService {
             StandardOpenOption.CREATE,
             StandardOpenOption.TRUNCATE_EXISTING
         );
+    }
+
+    private void removeMatchingFileLine(Path path, String firstColumnValue) throws IOException {
+        List<String> updated = new ArrayList<>();
+        for (String line : readLines(path)) {
+            String[] parts = line.split(JOB_FIELD_DELIMITER, 2);
+            if (parts.length >= 1 && parts[0].equals(firstColumnValue)) {
+                continue;
+            }
+            updated.add(line);
+        }
+        Files.write(path, updated, StandardCharsets.UTF_8,
+            StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
     }
 
     private List<String> readLines(Path path) throws IOException {
@@ -402,6 +432,7 @@ public class CloudDataService {
         return String.join(
             JOB_FIELD_DELIMITER,
             safeFileValue(job.getJobId()),
+            safeFileValue(job.getSubmitterId()),
             safeFileValue(job.getDescription()),
             Integer.toString(job.getDuration()),
             job.getArrivalTime() == null ? "" : job.getArrivalTime().toString(),
@@ -424,16 +455,21 @@ public class CloudDataService {
 
         try {
             String jobId = safeFileValue(fields[0]);
-            String description = safeFileValue(fields[1]);
-            int duration = Integer.parseInt(fields[2]);
-            LocalDateTime arrivalTime = parseDateTime(fields[3]);
-            LocalDateTime deadline = parseDateTime(fields[4]);
-            JobStatus status = fields[5].isBlank() ? JobStatus.QUEUED : JobStatus.valueOf(fields[5]);
-            Integer completionTime = fields[6].isBlank() ? null : Integer.parseInt(fields[6]);
-            String vehicleId = fields.length >= 8 ? safeFileValue(fields[7]) : null;
+            boolean legacyRow = fields.length < 9;
+            String submitterId = legacyRow ? null : safeFileValue(fields[1]);
+            String description = safeFileValue(fields[legacyRow ? 1 : 2]);
+            int duration = Integer.parseInt(fields[legacyRow ? 2 : 3]);
+            LocalDateTime arrivalTime = parseDateTime(fields[legacyRow ? 3 : 4]);
+            LocalDateTime deadline = parseDateTime(fields[legacyRow ? 4 : 5]);
+            JobStatus status = fields[legacyRow ? 5 : 6].isBlank()
+                ? JobStatus.QUEUED : JobStatus.valueOf(fields[legacyRow ? 5 : 6]);
+            Integer completionTime = fields[legacyRow ? 6 : 7].isBlank()
+                ? null : Integer.parseInt(fields[legacyRow ? 6 : 7]);
+            String vehicleId = fields.length >= (legacyRow ? 8 : 9)
+                ? safeFileValue(fields[legacyRow ? 7 : 8]) : null;
 
             Job.registerExistingJobId(jobId);
-            return new Job(jobId, description, duration, arrivalTime, deadline, status, completionTime, vehicleId);
+            return new Job(jobId, submitterId, description, duration, arrivalTime, deadline, status, completionTime, vehicleId);
         } catch (IllegalArgumentException e) {
             return null;
         }
@@ -452,6 +488,11 @@ public class CloudDataService {
     }
 
     private List<Map<String, String>> readVehiclesFromFile() throws IOException {
+        List<Map<String, String>> vehiclesFromFile = readVehicleRecordsFromFile();
+        if (!vehiclesFromFile.isEmpty()) {
+            return vehiclesFromFile;
+        }
+
         Map<String, Map<String, String>> vehicles = new LinkedHashMap<>();
         for (String line : readAllLogs()) {
             Map<String, String> record = parseLogEntry(line);
@@ -472,12 +513,16 @@ public class CloudDataService {
             if (vehicle == null) {
                 vehicle = new LinkedHashMap<>();
                 vehicle.put("VEHICLE_ID", vehicleId);
+                vehicle.put("OWNER_ID", safeValue(record.get("ID")));
                 vehicle.put("VEHICLE_INFO", safeValue(record.get("INFO")));
-                vehicle.put("RESIDENCY_HOURS", safeValue(record.get("DURATION")));
+                vehicle.put("RESIDENCY_HOURS", firstNonBlank(record.get("RESIDENCY"), record.get("DURATION"), "0"));
                 vehicle.put("STATUS", safeValue(record.get("STATUS")));
                 vehicle.put("AVAILABILITY", safeValue(record.get("AVAILABILITY")));
                 vehicles.put(vehicleId, vehicle);
             } else {
+                if (!safeValue(record.get("ID")).equals("N/A")) {
+                    vehicle.put("OWNER_ID", safeValue(record.get("ID")));
+                }
                 if (!safeValue(record.get("STATUS")).equals("N/A")) {
                     vehicle.put("STATUS", safeValue(record.get("STATUS")));
                 }
@@ -487,10 +532,70 @@ public class CloudDataService {
                 if (!safeValue(record.get("INFO")).equals("N/A")) {
                     vehicle.put("VEHICLE_INFO", safeValue(record.get("INFO")));
                 }
+                String residency = firstNonBlank(record.get("RESIDENCY"), record.get("DURATION"), null);
+                if (residency != null) {
+                    vehicle.put("RESIDENCY_HOURS", residency);
+                }
             }
         }
 
         return new ArrayList<>(vehicles.values());
+    }
+
+    private void writeVehicleToFile(String ownerId, String vehicleId, int residencyHours, String status, String availability)
+        throws IOException {
+        List<String> updated = new ArrayList<>();
+        boolean replaced = false;
+        for (String line : readLines(vehiclePath)) {
+            String[] parts = line.split(JOB_FIELD_DELIMITER, -1);
+            if (parts.length >= 1 && parts[0].equals(vehicleId)) {
+                updated.add(String.join(
+                    JOB_FIELD_DELIMITER,
+                    safeFileValue(vehicleId),
+                    safeFileValue(ownerId),
+                    Integer.toString(Math.max(residencyHours, 0)),
+                    safeFileValue(status),
+                    safeFileValue(availability)
+                ));
+                replaced = true;
+            } else {
+                updated.add(line);
+            }
+        }
+        if (!replaced) {
+            updated.add(String.join(
+                JOB_FIELD_DELIMITER,
+                safeFileValue(vehicleId),
+                safeFileValue(ownerId),
+                Integer.toString(Math.max(residencyHours, 0)),
+                safeFileValue(status),
+                safeFileValue(availability)
+            ));
+        }
+        Files.write(vehiclePath, updated, StandardCharsets.UTF_8,
+            StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+    }
+
+    private List<Map<String, String>> readVehicleRecordsFromFile() throws IOException {
+        List<Map<String, String>> vehicles = new ArrayList<>();
+        for (String line : readLines(vehiclePath)) {
+            if (line == null || line.isBlank()) {
+                continue;
+            }
+            String[] parts = line.split(JOB_FIELD_DELIMITER, -1);
+            if (parts.length < 5) {
+                continue;
+            }
+            Map<String, String> record = new LinkedHashMap<>();
+            record.put("VEHICLE_ID", safeValue(parts[0]));
+            record.put("OWNER_ID", safeValue(parts[1]));
+            record.put("RESIDENCY_HOURS", safeValue(parts[2]));
+            record.put("STATUS", safeValue(parts[3]));
+            record.put("AVAILABILITY", safeValue(parts[4]));
+            record.put("VEHICLE_INFO", safeValue(parts[0]));
+            vehicles.add(record);
+        }
+        return vehicles;
     }
 
     private void writePendingRequestToFile(String requestId, String entry, String submitter) throws IOException {
@@ -498,46 +603,59 @@ public class CloudDataService {
     }
 
     private Map<String, String> readPendingRequestFromFile() throws IOException {
-        List<String> lines = readLines(pendingRequestPath);
-        if (lines.isEmpty()) {
+        List<Map<String, String>> requests = readPendingRequestsFromFile();
+        if (requests.isEmpty()) {
             return Collections.emptyMap();
         }
-
-        String[] parts = lines.get(0).split(JOB_FIELD_DELIMITER, 3);
-        Map<String, String> map = new LinkedHashMap<>();
-        if (parts.length >= 1) map.put("REQUEST_ID", parts[0]);
-        if (parts.length >= 2) map.put("ENTRY", parts[1]);
-        if (parts.length >= 3) map.put("SUBMITTER", parts[2]);
-        return map;
+        return requests.get(0);
     }
 
     private List<Map<String, String>> readPendingRequestsFromFile() throws IOException {
         List<Map<String, String>> requests = new ArrayList<>();
-        Map<String, String> pendingRequest = readPendingRequestFromFile();
-        if (!pendingRequest.isEmpty()) {
-            requests.add(pendingRequest);
+        for (String line : readLines(pendingRequestPath)) {
+            String[] parts = line.split(JOB_FIELD_DELIMITER, 3);
+            if (parts.length < 3) {
+                continue;
+            }
+            Map<String, String> map = new LinkedHashMap<>();
+            map.put("REQUEST_ID", parts[0]);
+            map.put("ENTRY", parts[1]);
+            map.put("SUBMITTER", parts[2]);
+            requests.add(map);
         }
         return requests;
     }
 
     private void writeAdminDecisionToFile(String requestId, String decision) throws IOException {
-        clearFile(adminDecisionPath);
-        appendLine(adminDecisionPath, String.join(JOB_FIELD_DELIMITER, requestId, decision));
+        List<String> updated = new ArrayList<>();
+        boolean replaced = false;
+        for (String line : readLines(adminDecisionPath)) {
+            String[] parts = line.split(JOB_FIELD_DELIMITER, 2);
+            if (parts.length >= 1 && parts[0].equals(requestId)) {
+                updated.add(String.join(JOB_FIELD_DELIMITER, requestId, decision));
+                replaced = true;
+            } else {
+                updated.add(line);
+            }
+        }
+        if (!replaced) {
+            updated.add(String.join(JOB_FIELD_DELIMITER, requestId, decision));
+        }
+        Files.write(adminDecisionPath, updated, StandardCharsets.UTF_8,
+            StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
     }
 
     private String readAdminDecisionFromFile(String requestId) throws IOException {
-        List<String> lines = readLines(adminDecisionPath);
-        if (lines.isEmpty()) {
-            return "";
+        for (String line : readLines(adminDecisionPath)) {
+            String[] parts = line.split(JOB_FIELD_DELIMITER, 2);
+            if (parts.length < 2) {
+                continue;
+            }
+            if (requestId != null && !requestId.isBlank() && requestId.equals(parts[0])) {
+                return parts[1];
+            }
         }
-        String[] parts = lines.get(0).split(JOB_FIELD_DELIMITER, 2);
-        if (parts.length < 2) {
-            return "";
-        }
-        if (requestId != null && !requestId.isBlank() && !requestId.equals(parts[0])) {
-            return "";
-        }
-        return parts[1];
+        return "";
     }
 
     private List<String> getUnreadNotificationsFromFile(String username) throws IOException {
@@ -578,6 +696,31 @@ public class CloudDataService {
             return "";
         }
         return role.trim().replace(' ', '_').toUpperCase();
+    }
+
+    private String firstNonBlank(String first, String second, String fallback) {
+        if (first != null && !first.isBlank()) {
+            return first.trim();
+        }
+        if (second != null && !second.isBlank()) {
+            return second.trim();
+        }
+        return fallback;
+    }
+
+    private Map<String, String> toJobRecord(Job job) {
+        Map<String, String> record = new LinkedHashMap<>();
+        record.put("ROLE", "CLIENT");
+        record.put("JOB_ID", safeValue(job.getJobId()));
+        record.put("ID", safeValue(job.getJobId()));
+        record.put("SUBMITTER", safeValue(job.getSubmitterId()));
+        record.put("INFO", safeValue(job.getDescription()));
+        record.put("DESCRIPTION", safeValue(job.getDescription()));
+        record.put("DURATION", Integer.toString(job.getDuration()));
+        record.put("DEADLINE", job.getDeadline() == null ? "N/A" : job.getDeadline().toString());
+        record.put("STATUS", job.getStatus() == null ? JobStatus.QUEUED.name() : job.getStatus().name());
+        record.put("VEHICLE", safeValue(job.getVehicleId()));
+        return record;
     }
 
     public Map<String, String> parseLogEntry(String entry) {

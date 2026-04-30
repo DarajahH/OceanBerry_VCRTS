@@ -21,10 +21,7 @@ public class ServerMain {//Philip
     public static void main(String[] args) {
 
         CloudDataService service = new CloudDataService(); //NO path needed anymore - DH
-
-        try {
-            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-        } catch (Exception ignored) {} //DH
+        ThemeWrapper.apply();
 
         System.out.println("----------$$$ This is the VC Controller (Server) $$$--------");
         System.out.println("waiting for client to connect...");
@@ -74,30 +71,43 @@ public class ServerMain {//Philip
             boolean accepted = waitForAdminDecision(service, requestId);
 
             if (accepted) {
-                // Save accepted requests to the matching table.
-                String role = parseField(entry, "ROLE");
-                if ("CLIENT".equals(role) || "TASK_OWNER".equals(role)) {
-                    String id = parseField(entry, "ID");
-                    String info = parseField(entry, "INFO");
-                    int duration = Integer.parseInt(parseField(entry, "DURATION"));
-                    String deadlineStr = parseField(entry, "DEADLINE");
+                try {
+                    String role = normalizeRole(parseField(entry, "ROLE"));
+                    if ("CLIENT".equals(role) || "TASK_OWNER".equals(role)) {
+                        String jobId = firstNonBlank(parseField(entry, "TASK_ID"), parseField(entry, "ID"));
+                        String description = firstNonBlank(
+                            parseField(entry, "DESCRIPTION"),
+                            parseField(entry, "TASK"),
+                            parseField(entry, "INFO")
+                        );
+                        int duration = parseInteger(firstNonBlank(parseField(entry, "DURATION"), parseField(entry, "RESIDENCY")), 0);
+                        String deadlineStr = parseField(entry, "DEADLINE");
+                        String vehicleId = parseField(entry, "VEHICLE");
 
-                    LocalDateTime arrivalTime = LocalDateTime.now();
-                    LocalDateTime deadlineTime = (deadlineStr.isBlank() || "N/A".equals(deadlineStr)) ? null
-                        : LocalDateTime.parse(deadlineStr, dtf);
+                        LocalDateTime arrivalTime = LocalDateTime.now();
+                        LocalDateTime deadlineTime = parseDeadline(deadlineStr);
 
-                    Job job = Job.createJob(id, info, duration, arrivalTime, deadlineTime);
-                    service.appendJob(job);
-                } else if ("VEHICLE_OWNER".equals(role)) {
-                    String ownerId = parseField(entry, "ID");
-                    String vehicleInfo = parseField(entry, "INFO");
-                    int residencyHours = Integer.parseInt(parseField(entry, "RESIDENCY"));
-                    String status = parseField(entry, "STATUS");
-                    String availability = parseField(entry, "AVAILABILITY");
-                    service.appendVehicle(ownerId, vehicleInfo, residencyHours, status, availability);
+                        Job job = Job.createJob(jobId, submitter, description, duration, arrivalTime, deadlineTime, vehicleId);
+                        service.appendJobAndLog(job, entry);
+                    } else if ("VEHICLE_OWNER".equals(role)) {
+                        String ownerId = firstNonBlank(parseField(entry, "ID"), submitter);
+                        String vehicleId = firstNonBlank(parseField(entry, "VEHICLE"), parseField(entry, "INFO"));
+                        int residencyHours = parseInteger(firstNonBlank(parseField(entry, "RESIDENCY"), parseField(entry, "DURATION")), 0);
+                        String status = firstNonBlank(parseField(entry, "STATUS"), "IDLE");
+                        String availability = firstNonBlank(parseField(entry, "AVAILABILITY"), "open");
+                        service.appendVehicle(ownerId, vehicleId, residencyHours, status, availability);
+                        service.appendLog(entry);
+                    } else {
+                        service.appendLog(entry);
+                    }
+                } catch (IllegalArgumentException ex) {
+                    outputStream.writeUTF("REJECTED");
+                    System.out.println("Accepted request could not be persisted: " + ex.getMessage());
+                    service.clearPendingRequest(requestId);
+                    service.clearAdminDecision(requestId);
+                    return;
                 }
 
-                service.appendLog(entry);
                 outputStream.writeUTF("ACCEPTED");
                 System.out.println("Request ACCEPTED. Data saved to database.");
             } else {
@@ -105,8 +115,8 @@ public class ServerMain {//Philip
                 System.out.println("Request REJECTED. Nothing saved.");
             }
 
-            service.clearPendingRequest();
-            service.clearAdminDecision();
+            service.clearPendingRequest(requestId);
+            service.clearAdminDecision(requestId);
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -137,6 +147,41 @@ public class ServerMain {//Philip
             }
         }
         return "";
+    }
+
+    private static String normalizeRole(String role) {
+        if (role == null) {
+            return "";
+        }
+        return role.trim().replace(' ', '_').toUpperCase();
+    }
+
+    private static String firstNonBlank(String... values) {
+        for (String value : values) {
+            if (value != null && !value.isBlank()) {
+                return value.trim();
+            }
+        }
+        return "";
+    }
+
+    private static int parseInteger(String value, int fallback) {
+        try {
+            return Integer.parseInt(value);
+        } catch (NumberFormatException e) {
+            return fallback;
+        }
+    }
+
+    private static LocalDateTime parseDeadline(String value) {
+        if (value == null || value.isBlank() || "N/A".equalsIgnoreCase(value)) {
+            return null;
+        }
+        try {
+            return LocalDateTime.parse(value, dtf);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private static boolean waitForAdminDecision(CloudDataService service, String requestId)
