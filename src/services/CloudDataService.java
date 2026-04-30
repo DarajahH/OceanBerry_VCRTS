@@ -31,7 +31,6 @@ public class CloudDataService {
     private final Path pendingRequestPath;
     private final Path adminDecisionPath;
     private final Path notificationsPath;
-    private final boolean databaseReady;
     private String currentUsername;
 
     // No paths needed anymore! 
@@ -51,7 +50,6 @@ public class CloudDataService {
         this.pendingRequestPath = logPath.resolveSibling("pending_request.txt");
         this.adminDecisionPath = logPath.resolveSibling("admin_decision.txt");
         this.notificationsPath = logPath.resolveSibling("notifications.txt");
-        this.databaseReady = databaseAvailable();
     }
 
     private boolean databaseAvailable() {
@@ -62,8 +60,12 @@ public class CloudDataService {
         }
     }
 
+    private boolean shouldUseDatabase() {
+        return databaseAvailable();
+    }
+
     public synchronized List<Map<String, String>> readAllPendingRequests() throws IOException {
-        if (databaseReady) {
+        if (shouldUseDatabase()) {
             try { return db.getAllPendingRequests(); }
             catch (SQLException e) { /* fall back to file */ }
         }
@@ -71,7 +73,7 @@ public class CloudDataService {
     }
 
     public void appendLog(String entry) throws IOException {
-        if (databaseReady) {
+        if (shouldUseDatabase()) {
             try { db.insertLog(entry); return; }
             catch (SQLException e) { /* fall back to file */ }
         }
@@ -79,7 +81,7 @@ public class CloudDataService {
     }
 
     public List<String> readAllLogs() throws IOException {
-        if (databaseReady) {
+        if (shouldUseDatabase()) {
             try { return db.getAllLogs(); }
             catch (SQLException e) { /* fall back to file */ }
         }
@@ -95,7 +97,7 @@ public class CloudDataService {
         if (userExists(cleanUsername)) throw new IllegalArgumentException("Username already exists.");
         if (!cleanRole.equals("CLIENT") && !cleanRole.equals("OWNER") && !cleanRole.equals("ADMIN")) cleanRole = "CLIENT";
 
-        if (databaseReady) {
+        if (shouldUseDatabase()) {
             try { db.registerUser(cleanUsername, cleanPassword, cleanRole); return; }
             catch (SQLException e) { /* fall back to file */ }
         }
@@ -107,7 +109,7 @@ public class CloudDataService {
         String cleanPassword = password == null ? "" : password.trim();
         if (cleanUsername.isEmpty() || cleanPassword.isEmpty()) return false;
 
-        if (databaseReady) {
+        if (shouldUseDatabase()) {
             try {
                 if (db.validateUser(cleanUsername, cleanPassword)) {
                     currentUsername = cleanUsername;
@@ -125,7 +127,7 @@ public class CloudDataService {
 
     public boolean userExists(String username) {
         if (username == null || username.trim().isEmpty()) return false;
-        if (databaseReady) {
+        if (shouldUseDatabase()) {
             try { return db.userExists(username.trim()); }
             catch (SQLException e) { /* fall back to file */ }
         }
@@ -140,7 +142,7 @@ public class CloudDataService {
 
     public String getUserRole(String username) {
         if (username == null || username.trim().isEmpty()) return "CLIENT";
-        if (databaseReady) {
+        if (shouldUseDatabase()) {
             try {
                 String role = db.getUserRole(username.trim());
                 if (role != null && !role.isBlank()) return role.toUpperCase();
@@ -151,7 +153,7 @@ public class CloudDataService {
 
     public void appendJob(Job job) throws IOException {
         if (job == null) throw new IllegalArgumentException("Job cannot be null.");
-        if (databaseReady) {
+        if (shouldUseDatabase()) {
             try { db.insertJob(job); return; }
             catch (SQLException e) { /* fall back to file */ }
         }
@@ -159,7 +161,7 @@ public class CloudDataService {
     }
 
     public void appendJobAndLog(Job job, String logEntry) throws IOException {
-        if (databaseReady) {
+        if (shouldUseDatabase()) {
             try {
                 if (job != null) {
                     db.insertJob(job);
@@ -181,7 +183,7 @@ public class CloudDataService {
     }
 
     public List<Job> readJobs() throws IOException {
-        if (databaseReady) {
+        if (shouldUseDatabase()) {
             try { return db.getAllJobs(); }
             catch (SQLException e) { /* fall back to file */ }
         }
@@ -189,7 +191,7 @@ public class CloudDataService {
     }
 
     public List<Map<String, String>> readAllVehicles() throws IOException {
-        if (databaseReady) {
+        if (shouldUseDatabase()) {
             try { return db.getAllVehicles(); }
             catch (SQLException e) { /* fall back to file */ }
         }
@@ -235,7 +237,7 @@ public class CloudDataService {
             resolvedVin
         );
 
-        if (databaseReady) {
+        if (shouldUseDatabase()) {
             try {
                 db.insertVehicle(
                     resolvedOwnerId,
@@ -266,7 +268,7 @@ public class CloudDataService {
     }
 
     public synchronized void writePendingRequest(String requestId, String entry, String submitter) throws IOException {
-        if (databaseReady) {
+        if (shouldUseDatabase()) {
             try { db.insertPendingRequest(requestId, entry, submitter); return; }
             catch (SQLException e) { /* fall back to file */ }
         }
@@ -274,7 +276,7 @@ public class CloudDataService {
     }
 
     public synchronized Map<String, String> readPendingRequest() throws IOException {
-        if (databaseReady) {
+        if (shouldUseDatabase()) {
             try { return db.getPendingRequest(); }
             catch (SQLException e) { /* fall back to file */ }
         }
@@ -282,7 +284,7 @@ public class CloudDataService {
     }
 
     public synchronized void writeAdminDecision(String requestId, String decision) throws IOException {
-        if (databaseReady) {
+        if (shouldUseDatabase()) {
             try { db.updateAdminDecision(requestId, decision); return; }
             catch (SQLException e) { /* fall back to file */ }
         }
@@ -290,7 +292,7 @@ public class CloudDataService {
     }
 
     public synchronized String readAdminDecision(String requestId) throws IOException {
-        if (databaseReady) {
+        if (shouldUseDatabase()) {
             try { return db.getAdminDecision(requestId); }
             catch (SQLException e) { /* fall back to file */ }
         }
@@ -299,7 +301,7 @@ public class CloudDataService {
 
     // Because SQL uses statuses (PENDING -> ACCEPTED), we no longer need to manually delete entries!
     public synchronized void clearPendingRequest() throws IOException {
-        if (databaseReady) {
+        if (shouldUseDatabase()) {
             try { db.clearPendingRequest(); return; }
             catch (SQLException e) { /* fall back to file */ }
         }
@@ -311,7 +313,7 @@ public class CloudDataService {
             clearPendingRequest();
             return;
         }
-        if (databaseReady) {
+        if (shouldUseDatabase()) {
             try { db.clearPendingRequest(requestId); return; }
             catch (SQLException e) { /* fall back to file */ }
         }
@@ -319,7 +321,7 @@ public class CloudDataService {
     }
 
     public synchronized void clearAdminDecision() throws IOException {
-        if (databaseReady) {
+        if (shouldUseDatabase()) {
             try { db.clearAdminDecision(); return; }
             catch (SQLException e) { /* fall back to file */ }
         }
@@ -331,7 +333,7 @@ public class CloudDataService {
             clearAdminDecision();
             return;
         }
-        if (databaseReady) {
+        if (shouldUseDatabase()) {
             try { db.clearAdminDecision(requestId); return; }
             catch (SQLException e) { /* fall back to file */ }
         }
@@ -340,7 +342,7 @@ public class CloudDataService {
 
     public synchronized void addNotification(String username, String message) throws IOException {
         if (username == null || username.isBlank() || message == null || message.isBlank()) return;
-        if (databaseReady) {
+        if (shouldUseDatabase()) {
             try { db.insertNotification(username, message); return; }
             catch (SQLException e) { /* fall back to file */ }
         }
@@ -349,7 +351,7 @@ public class CloudDataService {
 
     public synchronized List<String> getUnreadNotifications(String username) throws IOException {
         if (username == null || username.isBlank()) return Collections.emptyList();
-        if (databaseReady) {
+        if (shouldUseDatabase()) {
             try { return db.getUnreadNotifications(username); }
             catch (SQLException e) { /* fall back to file */ }
         }
@@ -358,7 +360,7 @@ public class CloudDataService {
 
     public synchronized void markNotificationsRead(String username) throws IOException {
         if (username == null || username.isBlank()) return;
-        if (databaseReady) {
+        if (shouldUseDatabase()) {
             try { db.markNotificationsRead(username); return; }
             catch (SQLException e) { /* fall back to file */ }
         }
