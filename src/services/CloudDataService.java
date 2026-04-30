@@ -1,7 +1,7 @@
 package services;
 
-import database.DatabaseService;
 import database.DatabaseConnection;
+import database.DatabaseService;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -63,26 +63,14 @@ public class CloudDataService {
     }
 
     public synchronized List<Map<String, String>> readAllPendingRequests() throws IOException {
-        if (databaseReady) {
-            try { return db.getAllPendingRequests(); }
-            catch (SQLException e) { /* fall back to file */ }
-        }
         return readPendingRequestsFromFile();
     }
 
     public void appendLog(String entry) throws IOException {
-        if (databaseReady) {
-            try { db.insertLog(entry); return; }
-            catch (SQLException e) { /* fall back to file */ }
-        }
         appendLine(logPath, entry);
     }
 
     public List<String> readAllLogs() throws IOException {
-        if (databaseReady) {
-            try { return db.getAllLogs(); }
-            catch (SQLException e) { /* fall back to file */ }
-        }
         return readLines(logPath);
     }
 
@@ -159,26 +147,25 @@ public class CloudDataService {
     }
 
     public void appendJobAndLog(Job job, String logEntry) throws IOException {
-        if (databaseReady) {
-            try {
-                if (job != null) {
-                    db.insertJob(job);
-                }
-                if (logEntry != null && !logEntry.isBlank()) {
-                    db.insertLog(logEntry);
-                }
-                return;
-            } catch (SQLException e) {
-                // fall back to file
+    if (databaseReady) {
+        try {
+            if (job != null) {
+                db.insertJob(job);
+            }
+        } catch (SQLException e) {
+            if (job != null) {
+                appendJobToFile(job);
             }
         }
-        if (job != null) {
-            appendJobToFile(job);
-        }
-        if (logEntry != null && !logEntry.isBlank()) {
-            appendLine(logPath, logEntry);
-        }
+    } else if (job != null) {
+        appendJobToFile(job);
     }
+
+    if (logEntry != null && !logEntry.isBlank()) {
+        appendLine(logPath, logEntry);
+    }
+}
+
 
     public List<Job> readJobs() throws IOException {
         if (databaseReady) {
@@ -266,43 +253,23 @@ public class CloudDataService {
     }
 
     public synchronized void writePendingRequest(String requestId, String entry, String submitter) throws IOException {
-        if (databaseReady) {
-            try { db.insertPendingRequest(requestId, entry, submitter); return; }
-            catch (SQLException e) { /* fall back to file */ }
-        }
         writePendingRequestToFile(requestId, entry, submitter);
     }
 
     public synchronized Map<String, String> readPendingRequest() throws IOException {
-        if (databaseReady) {
-            try { return db.getPendingRequest(); }
-            catch (SQLException e) { /* fall back to file */ }
-        }
         return readPendingRequestFromFile();
     }
 
     public synchronized void writeAdminDecision(String requestId, String decision) throws IOException {
-        if (databaseReady) {
-            try { db.updateAdminDecision(requestId, decision); return; }
-            catch (SQLException e) { /* fall back to file */ }
-        }
         writeAdminDecisionToFile(requestId, decision);
     }
 
     public synchronized String readAdminDecision(String requestId) throws IOException {
-        if (databaseReady) {
-            try { return db.getAdminDecision(requestId); }
-            catch (SQLException e) { /* fall back to file */ }
-        }
         return readAdminDecisionFromFile(requestId);
     }
 
     // Because SQL uses statuses (PENDING -> ACCEPTED), we no longer need to manually delete entries!
     public synchronized void clearPendingRequest() throws IOException {
-        if (databaseReady) {
-            try { db.clearPendingRequest(); return; }
-            catch (SQLException e) { /* fall back to file */ }
-        }
         clearFile(pendingRequestPath);
     }
 
@@ -311,18 +278,10 @@ public class CloudDataService {
             clearPendingRequest();
             return;
         }
-        if (databaseReady) {
-            try { db.clearPendingRequest(requestId); return; }
-            catch (SQLException e) { /* fall back to file */ }
-        }
         removeMatchingFileLine(pendingRequestPath, requestId);
     }
 
     public synchronized void clearAdminDecision() throws IOException {
-        if (databaseReady) {
-            try { db.clearAdminDecision(); return; }
-            catch (SQLException e) { /* fall back to file */ }
-        }
         clearFile(adminDecisionPath);
     }
 
@@ -331,37 +290,21 @@ public class CloudDataService {
             clearAdminDecision();
             return;
         }
-        if (databaseReady) {
-            try { db.clearAdminDecision(requestId); return; }
-            catch (SQLException e) { /* fall back to file */ }
-        }
         removeMatchingFileLine(adminDecisionPath, requestId);
     }
 
     public synchronized void addNotification(String username, String message) throws IOException {
         if (username == null || username.isBlank() || message == null || message.isBlank()) return;
-        if (databaseReady) {
-            try { db.insertNotification(username, message); return; }
-            catch (SQLException e) { /* fall back to file */ }
-        }
         appendLine(notificationsPath, username + "\t" + message + "\tUNREAD");
     }
 
     public synchronized List<String> getUnreadNotifications(String username) throws IOException {
         if (username == null || username.isBlank()) return Collections.emptyList();
-        if (databaseReady) {
-            try { return db.getUnreadNotifications(username); }
-            catch (SQLException e) { /* fall back to file */ }
-        }
         return getUnreadNotificationsFromFile(username);
     }
 
     public synchronized void markNotificationsRead(String username) throws IOException {
         if (username == null || username.isBlank()) return;
-        if (databaseReady) {
-            try { db.markNotificationsRead(username); return; }
-            catch (SQLException e) { /* fall back to file */ }
-        }
         markNotificationsReadInFile(username);
     }
 
@@ -911,5 +854,4 @@ public class CloudDataService {
 
         return fields;
     }
-    
 }
