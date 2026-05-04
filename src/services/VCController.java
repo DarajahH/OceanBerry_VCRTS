@@ -1,13 +1,9 @@
 package services;
 
 import java.io.IOException;
-import java.sql.Connection;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-
-import database.DatabaseConnection;
 
 import java.time.format.DateTimeFormatter;
 import models.job.Job;
@@ -43,6 +39,18 @@ public class VCController {
       //Completion time calculation based on job durations and deadlines. EC
 
     public List<JobCompletionRecord> calculateCompletionTimes() throws IOException {
+        return calculateCompletionTimes(null, false);
+    }
+
+    public List<JobCompletionRecord> previewCompletionTimes(Job pendingJob) throws IOException {
+        return calculateCompletionTimes(pendingJob, false);
+    }
+
+    public List<JobCompletionRecord> calculateAndPersistCompletionTimes() throws IOException {
+        return calculateCompletionTimes(null, true);
+    }
+
+    private List<JobCompletionRecord> calculateCompletionTimes(Job pendingJob, boolean persist) throws IOException {
         
         List<JobCompletionRecord> completionRecords = new ArrayList<>();
         if (dataService == null) {
@@ -51,6 +59,9 @@ public class VCController {
 
         int runningCompletionTime = 0;
         List<Job> jobs = new ArrayList<>(dataService.readJobs());
+        if (pendingJob != null) {
+            jobs.add(pendingJob);
+        }
 
         jobs.sort(Comparator.comparing(Job::getArrivalTime, Comparator.nullsLast(Comparator.naturalOrder())));
 
@@ -58,6 +69,9 @@ public class VCController {
         for (Job job : jobs) {
             runningCompletionTime += job.getDuration();
             job.setCompletionTime(runningCompletionTime);
+            if (persist) {
+                dataService.updateJobCompletionTime(job.getJobId(), runningCompletionTime);
+            }
 
             completionRecords.add(new JobCompletionRecord(
                 job.getJobId(),
@@ -69,6 +83,20 @@ public class VCController {
         }
 
         return completionRecords;
+    }
+
+    public JobCompletionRecord calculateCompletionTimeForJob(String jobId) throws IOException {
+        if (jobId == null || jobId.isBlank()) {
+            return null;
+        }
+
+        for (JobCompletionRecord record : calculateAndPersistCompletionTimes()) {
+            if (jobId.trim().equals(record.getJobId())) {
+                return record;
+            }
+        }
+
+        return null;
     }
 
     //A static inner class to represent job completion records for display purposes. EC

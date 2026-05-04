@@ -169,6 +169,20 @@ public class CloudDataService {
         }
     }
 
+    public void updateJobCompletionTime(String jobId, int completionTime) throws IOException {
+        requireDatabase();
+
+        if (jobId == null || jobId.isBlank()) {
+            throw new IllegalArgumentException("Job ID is required to update completion time.");
+        }
+
+        try {
+            db.updateJobCompletionTime(jobId.trim(), completionTime);
+        } catch (SQLException e) {
+            throw new IOException("Unable to update job completion time in SQL.", e);
+        }
+    }
+
     public List<Map<String, String>> readAllVehicles() throws IOException {
         requireDatabase();
 

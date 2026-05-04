@@ -13,3 +13,38 @@ evs1	Your job request was ACCEPTED:\n[2026/04/16 21:30:42] ROLE:CLIENT | ID:343 
 evs1	Server ACK received (Request ID: 80896b19-208e-410b-8040-b45d8ebd8208) — vehicle submission pending approval.	READ
 evs1	Your submission was REJECTED:
 [2026/04/30 00:48:47] ROLE:VEHICLE_OWNER | ID:1212 | VEHICLE:2092032 | MAKE:2309023 | MODEL:Hyundai | YEAR:2025 | VIN:09210291 | RESIDENCY:12 | STATUS:IN_SERVICE | AVAILABILITY:YES	UNREAD
+evs1	Server ACK received (Request ID: 217eb1d6-bc7c-4d82-bca2-29e105805d4c) — vehicle submission pending approval.	READ
+evs1	Your submission was ACCEPTED:
+[2026/05/03 23:51:15] ROLE:VEHICLE_OWNER | ID:43221 | VEHICLE:4321 | MAKE:BMW | MODEL:M5 | YEAR:2026 | VIN:12345678987654321 | RESIDENCY:2 | STATUS:IDLE | AVAILABILITY:YES	UNREAD
+evs1	Server ACK received (Request ID: b609f5b3-3cc1-418f-9bc7-33011dcaa5ef) — request pending approval.	READ
+evs1	Your submission was ACCEPTED by admin and saved to SQL. Request ID: b609f5b3-3cc1-418f-9bc7-33011dcaa5ef	READ
+evs1	Server ACK received (Request ID: aec9c763-6b81-4a37-8ce2-079c1c87453f) — request pending approval.	READ
+evs1	Your submission was REJECTED by admin. Nothing was saved to SQL. Request ID: aec9c763-6b81-4a37-8ce2-079c1c87453f	READ
+evs1	Server ACK received (Request ID: 289b5c6d-b7f8-403e-a4fa-e9b8fd1d938c) — request pending approval.	READ
+evs1	Your submission was ACCEPTED by admin, but request 289b5c6d-b7f8-403e-a4fa-e9b8fd1d938c could not be saved. Nothing was written to SQL.	READ
+evs1	Server ACK received (Request ID: ce23756b-4ec8-4ad0-924f-3673ca450622) — request pending approval.	READ
+evs1	Your submission was ACCEPTED by admin, but request ce23756b-4ec8-4ad0-924f-3673ca450622 could not be saved. Nothing was written to SQL.	READ
+evs1	Server ACK received (Request ID: 89adb28b-3ba9-4515-97fd-928f0c82cd79) — request pending approval.	READ
+evs1	Your submission was ACCEPTED by admin, but request 89adb28b-3ba9-4515-97fd-928f0c82cd79 could not be saved. Nothing was written to SQL.	READ
+evs1	Server ACK received (Request ID: 161ab4c8-fc71-425a-a13b-d27256f2bed4) — request pending approval.	READ
+evs1	Your submission was ACCEPTED. Request ID: 161ab4c8-fc71-425a-a13b-d27256f2bed4	READ
+evs1	Server ACK received (Request ID: 79a85c8b-13af-4ff8-9fbe-e6a4ac8eb7da) — request pending approval.	READ
+evs1	Your submission was REJECTED by admin.Request ID: 79a85c8b-13af-4ff8-9fbe-e6a4ac8eb7da	READ
+shi	Server ACK received (Request ID: 405b24d4-6574-44d5-8832-ef6a93511fa3) — vehicle submission pending approval.	READ
+shi	Your submission was ACCEPTED. Request ID: 405b24d4-6574-44d5-8832-ef6a93511fa3	READ
+shi	Server ACK received (Request ID: bfc06171-2b86-4604-88f0-5633c54af2f2) — vehicle submission pending approval.	READ
+shi	Your submission was ACCEPTED. Request ID: bfc06171-2b86-4604-88f0-5633c54af2f2	READ
+shi	Server ACK received (Request ID: 61fec191-1ce8-4cc0-b814-e041d4a8e1c9) — vehicle submission pending approval.	READ
+shi	Your submission was REJECTED by admin.Request ID: 61fec191-1ce8-4cc0-b814-e041d4a8e1c9	READ
+shi	Server ACK received (Request ID: fbef93e2-6222-4aec-98a6-e71a49892299) — vehicle submission pending approval.	READ
+shi	Your submission was ACCEPTED. Request ID: fbef93e2-6222-4aec-98a6-e71a49892299	READ
+shi	Server ACK received (Request ID: 3312ba37-dfbb-4b71-add4-de9d326c3322) — vehicle submission pending approval.	READ
+shi	Your submission was REJECTED by admin.Request ID: 3312ba37-dfbb-4b71-add4-de9d326c3322	READ
+evs1	Server ACK received (Request ID: 2d05000e-f499-4aae-b615-353fe9a196b5) — request pending approval.	READ
+evs1	Your submission was ACCEPTED. Request ID: 2d05000e-f499-4aae-b615-353fe9a196b5	READ
+evs1	Server ACK received (Request ID: e8e5918f-8f00-44c1-823e-3d076b89c2cb) — request pending approval.	READ
+evs1	Server ACK received (Request ID: 66d24050-52e5-4e83-940c-98bacb2a76e1) — request pending approval.	READ
+evs1	Server ACK received (Request ID: ed8f56c6-4ced-4482-9aad-33f4a4fa78eb) — request pending approval.	READ
+evs1	Your submission was REJECTED by admin.Request ID: ed8f56c6-4ced-4482-9aad-33f4a4fa78eb	READ
+evs1	Server ACK received (Request ID: 12cfd5a6-0c9a-4c17-8756-ab3a99194d9e) — request pending approval.	READ
+evs1	Your submission was ACCEPTED. Request ID: 12cfd5a6-0c9a-4c17-8756-ab3a99194d9e FIFO completion time: 14 hour(s).	READ

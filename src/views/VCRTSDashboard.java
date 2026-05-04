@@ -18,8 +18,10 @@ import java.util.Map;
 import javax.swing.*;
 import javax.swing.border.Border;
 import javax.swing.border.EmptyBorder;
+import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.TableColumn;
 import javax.swing.table.DefaultTableModel;
+import models.enums.JobStatus;
 import models.job.Job;
 import services.CloudDataService;
 import services.VCController;
@@ -87,6 +89,9 @@ public class VCRTSDashboard {
     private JTable clientJobTable;
     private DefaultTableModel clientJobModel;
     private JTextArea clientActivityArea;
+    private JTable adminCompletionTable;
+    private DefaultTableModel adminCompletionModel;
+    private String adminCompletionPreviewJobId;
     private JTable pendingRequestsTable;
     private javax.swing.table.DefaultTableModel pendingRequestsModel;
     private JLabel adminRequestStatusLabel;
@@ -169,12 +174,13 @@ public class VCRTSDashboard {
             clientButton.addActionListener(e -> showScreen(FORM_SCREEN));
         }
 
-        JButton taskOwnerButton = new JButton("Task Owner Portal");
-        styleSecondaryButton(taskOwnerButton);
-        taskOwnerButton.setEnabled(isClientUser());
-        if (isClientUser()) {
-            taskOwnerButton.addActionListener(e -> showScreen(TASK_OWNER_SCREEN));
-        }
+        // Task Owner client entry point is temporarily hidden.
+        // JButton taskOwnerButton = new JButton("Task Owner Portal");
+        // styleSecondaryButton(taskOwnerButton);
+        // taskOwnerButton.setEnabled(isClientUser());
+        // if (isClientUser()) {
+        //     taskOwnerButton.addActionListener(e -> showScreen(TASK_OWNER_SCREEN));
+        // }
 
         JButton adminButton = new JButton("Open Admin Review");
         stylePrimaryButton(adminButton);
@@ -202,7 +208,7 @@ public class VCRTSDashboard {
         grid.add(createLaunchCard("Residency", null, createButtonStack(residencyButton)));
         if (isClientUser()) {
             grid.add(createLaunchCard("Client", null, createButtonStack(clientButton)));
-            grid.add(createLaunchCard("Task Owner", null, createButtonStack(taskOwnerButton)));
+            // grid.add(createLaunchCard("Task Owner", null, createButtonStack(taskOwnerButton)));
         }
         if (isAdminUser()) {
             grid.add(createLaunchCard("Admin", null, createButtonStack(adminButton)));
@@ -270,9 +276,6 @@ public class VCRTSDashboard {
         adminRequestStatusLabel.setForeground(TEXT_MUTED);
         adminRequestStatusLabel.setFont(BODY_FONT);
 
-        JButton refreshBtn = new JButton("Refresh");
-        styleSecondaryButton(refreshBtn);
-        refreshBtn.addActionListener(e -> refreshPendingAdminRequest());
         JButton viewDetailsBtn = new JButton("View full details");
         styleSecondaryButton(viewDetailsBtn);
         viewDetailsBtn.addActionListener(e -> showSelectedPendingRequestDetails());
@@ -295,17 +298,18 @@ public class VCRTSDashboard {
 
         JPanel statusBadge = createStatusBadge("STATUS", adminRequestStatusLabel);
         statusBadge.setAlignmentX(Component.LEFT_ALIGNMENT);
+        statusBadge.setMaximumSize(new Dimension(Integer.MAX_VALUE, statusBadge.getPreferredSize().height));
         statusContent.add(statusBadge);
-        statusContent.add(Box.createVerticalStrut(14));
+        statusContent.add(Box.createVerticalStrut(10));
 
         JPanel controls = createButtonStack(
-            refreshBtn,
             viewDetailsBtn,
             btnCalcTimes,
             acceptBtn,
             rejectBtn
         );
         controls.setAlignmentX(Component.LEFT_ALIGNMENT);
+        controls.setMaximumSize(new Dimension(Integer.MAX_VALUE, controls.getPreferredSize().height));
         statusContent.add(controls);
 
         JPanel body = new JPanel(new BorderLayout(12, 0));
@@ -427,9 +431,9 @@ public class VCRTSDashboard {
         top.add(createSidebarButton(HOME_SCREEN, "Dashboard"));
         if (isClientUser()) {
             top.add(Box.createVerticalStrut(6));
-            top.add(createSidebarButton(FORM_SCREEN, "Client"));
+            top.add(createSidebarButton(FORM_SCREEN, "Task Owner"));
             top.add(Box.createVerticalStrut(6));
-            top.add(createSidebarButton(TASK_OWNER_SCREEN, "Task Owner"));
+            // top.add(createSidebarButton(TASK_OWNER_SCREEN, "Task Owner"));
         }
         if (isOwnerUser()) {
             top.add(Box.createVerticalStrut(6));
@@ -985,6 +989,10 @@ public class VCRTSDashboard {
             return createStackedWorkspace(scrollableMain, createOwnerVehiclePanel());
         }
 
+        if (isAdminUser()) {
+            return createStackedWorkspace(scrollableMain, createAdminCompletionPanel(), createMonitorPanel());
+        }
+
         return createStackedWorkspace(scrollableMain);
     }
 
@@ -1313,6 +1321,69 @@ public class VCRTSDashboard {
             terminalPanel
         );
         panel.setPreferredSize(new Dimension(0, 130));
+        return panel;
+    }
+
+    private JPanel createAdminCompletionPanel() {
+        String[] columns = {"ID", "Description", "Duration", "Deadline", "Completion Time", "Status"};
+        adminCompletionModel = new DefaultTableModel(columns, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+
+        adminCompletionTable = new JTable(adminCompletionModel);
+        styleTable(adminCompletionTable);
+        adminCompletionTable.setFillsViewportHeight(true);
+        adminCompletionTable.setRowHeight(26);
+        adminCompletionTable.setAutoCreateRowSorter(true);
+        adminCompletionTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+        adminCompletionTable.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(
+                JTable table,
+                Object value,
+                boolean isSelected,
+                boolean hasFocus,
+                int row,
+                int column
+            ) {
+                Component component = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                int modelRow = table.convertRowIndexToModel(row);
+                Object statusValue = adminCompletionModel.getValueAt(modelRow, 5);
+                boolean hypothetical = statusValue != null && statusValue.toString().startsWith("Hypothetical");
+
+                if (!isSelected && hypothetical) {
+                    component.setBackground(ACCENT_GHOST);
+                    component.setForeground(TEXT_PRIMARY);
+                }
+                component.setFont(hypothetical ? component.getFont().deriveFont(Font.BOLD) : component.getFont().deriveFont(Font.PLAIN));
+
+                setToolTipText(hypothetical ? "Preview only. This job is not saved until accepted." : null);
+                return component;
+            }
+        });
+
+        TableColumn idCol = adminCompletionTable.getColumnModel().getColumn(0);
+        TableColumn descriptionCol = adminCompletionTable.getColumnModel().getColumn(1);
+        TableColumn durationCol = adminCompletionTable.getColumnModel().getColumn(2);
+        TableColumn deadlineCol = adminCompletionTable.getColumnModel().getColumn(3);
+        TableColumn completionCol = adminCompletionTable.getColumnModel().getColumn(4);
+        TableColumn statusCol = adminCompletionTable.getColumnModel().getColumn(5);
+        idCol.setPreferredWidth(120);
+        descriptionCol.setPreferredWidth(260);
+        durationCol.setPreferredWidth(100);
+        deadlineCol.setPreferredWidth(180);
+        completionCol.setPreferredWidth(140);
+        statusCol.setPreferredWidth(240);
+
+        JScrollPane scrollPane = new JScrollPane(adminCompletionTable);
+        styleScrollPane(scrollPane, null);
+        scrollPane.setPreferredSize(new Dimension(0, 170));
+
+        JPanel panel = createSurfaceCard("Completion Times", "Preview-only FIFO by arrival time. Highlighted rows are hypothetical until accepted.", scrollPane);
+        panel.setPreferredSize(new Dimension(0, 220));
         return panel;
     }
 
@@ -2048,8 +2119,13 @@ public class VCRTSDashboard {
 
     private void calculateCompletionTimes() {
         try {
-            List<JobCompletionRecord> records = controller.calculateCompletionTimes();
+            Job pendingJob = createSelectedPendingJobPreview();
+            adminCompletionPreviewJobId = pendingJob == null ? null : pendingJob.getJobId();
+            List<JobCompletionRecord> records = pendingJob == null
+                ? controller.calculateCompletionTimes()
+                : controller.previewCompletionTimes(pendingJob);
             if (records.isEmpty()) {
+                refreshAdminCompletionPanel(records);
                 String msg = "No client jobs found.";
                 if (canViewVcrtsLogs()) {
                     refreshMonitor(msg);
@@ -2060,13 +2136,18 @@ public class VCRTSDashboard {
             }
 
             StringBuilder results = new StringBuilder();
-            results.append("FIFO Completion Times\n---------------------\n");
+            results.append(pendingJob == null ? "FIFO Completion Times\n---------------------\n" : "Hypothetical FIFO Completion Times\n----------------------------------\n");
             for (JobCompletionRecord record : records) {
                 results.append(record.toDisplayString()).append("\n");
             }
+            refreshAdminCompletionPanel(records);
 
             if (canViewVcrtsLogs()) {
                 refreshMonitor(results.toString().trim());
+                String message = pendingJob == null
+                    ? "Completion times previewed for " + records.size() + " job(s)."
+                    : "Hypothetical completion time previewed. Accept to save it.";
+                showFeedback(message, pendingJob == null ? SUCCESS : ACCENT_GHOST, 4200);
             } else {
                 JTextArea textArea = new JTextArea(results.toString().trim());
                 textArea.setEditable(false);
@@ -2080,7 +2161,117 @@ public class VCRTSDashboard {
             }
             refreshMonitor(results.toString().trim());
         } catch (HeadlessException | IOException e) {
+            if (canViewVcrtsLogs()) {
+                refreshMonitor("Unable to calculate completion times: " + e.getMessage());
+            }
             showFeedback("Error calculating completion times.", DANGER, 3600);
+        }
+    }
+
+    private Job createSelectedPendingJobPreview() {
+        if (pendingRequestsTable == null || pendingRequestsModel == null) {
+            return null;
+        }
+
+        int selectedRow = pendingRequestsTable.getSelectedRow();
+        if (selectedRow < 0) {
+            return null;
+        }
+
+        int modelRow = pendingRequestsTable.convertRowIndexToModel(selectedRow);
+        String submitter = String.valueOf(pendingRequestsModel.getValueAt(modelRow, 1));
+        String entry = String.valueOf(pendingRequestsModel.getValueAt(modelRow, 3));
+        Map<String, String> parsed = service.parseLogEntry(entry);
+        String role = normalizeRole(parsed.get("ROLE"));
+        if (!"CLIENT".equals(role) && !"TASK_OWNER".equals(role)) {
+            return null;
+        }
+
+        String jobId = firstNonBlank(parsed.get("TASK_ID"), parsed.get("ID"));
+        String description = firstNonBlank(parsed.get("DESCRIPTION"), parsed.get("TASK"), parsed.get("INFO"));
+        int duration = parseInteger(firstNonBlank(parsed.get("DURATION"), parsed.get("RESIDENCY")), 0);
+        LocalDateTime arrivalTime = parseDateTime(firstNonBlank(parsed.get("TIMESTAMP")));
+        LocalDateTime deadline = parseDateTime(firstNonBlank(parsed.get("DEADLINE")));
+        String vehicleId = firstNonBlank(parsed.get("VEHICLE"));
+
+        if (jobId.isBlank() || duration <= 0) {
+            showFeedback("Selected pending job is missing an ID or duration.", WARNING, 3600);
+            return null;
+        }
+
+        return new Job(
+            jobId,
+            submitter,
+            description,
+            duration,
+            arrivalTime == null ? LocalDateTime.now() : arrivalTime,
+            deadline,
+            JobStatus.QUEUED,
+            null,
+            vehicleId.isBlank() ? null : vehicleId
+        );
+    }
+
+    private String firstNonBlank(String... values) {
+        for (String value : values) {
+            if (value != null && !value.isBlank() && !"N/A".equalsIgnoreCase(value.trim())) {
+                return value.trim();
+            }
+        }
+        return "";
+    }
+
+    private int parseInteger(String value, int fallback) {
+        try {
+            return Integer.parseInt(value);
+        } catch (NumberFormatException e) {
+            return fallback;
+        }
+    }
+
+    private LocalDateTime parseDateTime(String value) {
+        if (value == null || value.isBlank() || "N/A".equalsIgnoreCase(value)) {
+            return null;
+        }
+        try {
+            return LocalDateTime.parse(value, dtf);
+        } catch (java.time.format.DateTimeParseException e) {
+            return null;
+        }
+    }
+
+    private void refreshAdminCompletionPanel(List<JobCompletionRecord> records) {
+        if (adminCompletionModel == null) {
+            return;
+        }
+
+        adminCompletionModel.setRowCount(0);
+        if (records == null) {
+            return;
+        }
+
+        for (JobCompletionRecord record : records) {
+            boolean hypothetical = adminCompletionPreviewJobId != null
+                && adminCompletionPreviewJobId.equals(record.getJobId());
+            adminCompletionModel.addRow(new Object[] {
+                record.getJobId(),
+                record.getInfo(),
+                record.getResidencyTimeHours(),
+                record.getDeadline(),
+                record.getCompletionTime(),
+                hypothetical ? "Pending decision" : "Existing job"
+            });
+        }
+    }
+
+    private void refreshAdminCompletionPanelFromSavedJobs() {
+        adminCompletionPreviewJobId = null;
+        try {
+            refreshAdminCompletionPanel(controller.calculateCompletionTimes());
+        } catch (IOException e) {
+            if (canViewVcrtsLogs()) {
+                refreshMonitor("Unable to refresh saved completion times: " + e.getMessage());
+            }
         }
     }
 
@@ -2551,12 +2742,14 @@ public class VCRTSDashboard {
 
         try {
             service.writeAdminDecision(requestId, decision);
+            service.clearPendingRequest(requestId);
 
             adminRequestStatusLabel.setText("Last response sent: " + decision);
             refreshMonitor("Admin decision sent for request:\n" + entry + "\nSTATUS: " + decision);
             showFeedback("Decision sent: " + decision + ".", "ACCEPTED".equals(decision) ? SUCCESS : WARNING, 3600);
             
             refreshPendingAdminRequest(); // Refresh the table immediately to clear the accepted/rejected row
+            refreshAdminCompletionPanelFromSavedJobs();
         } catch (IOException e) {
             showFeedback("Unable to send admin decision.", DANGER, 3600);
         }

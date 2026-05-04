@@ -8,6 +8,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 import models.job.Job;
 import services.CloudDataService;
+import services.VCController;
 
 public class ServerMain {//Philip
 
@@ -92,6 +93,7 @@ public class ServerMain {//Philip
             boolean accepted = waitForAdminDecision(service, requestId);
 
             if (accepted) {
+                String completionMessage = "";
                 try {
                     String role = normalizeRole(parseField(entry, "ROLE"));
                     if ("CLIENT".equals(role) || "TASK_OWNER".equals(role)) {
@@ -110,6 +112,13 @@ public class ServerMain {//Philip
 
                         Job job = Job.createJob(jobId, submitter, description, duration, arrivalTime, deadlineTime, vehicleId);
                         service.appendJobAndLog(job, entry);
+                        VCController.JobCompletionRecord completionRecord =
+                            new VCController(service).calculateCompletionTimeForJob(job.getJobId());
+                        if (completionRecord != null) {
+                            completionMessage = " FIFO completion time: "
+                                + completionRecord.getCompletionTime()
+                                + " hour(s).";
+                        }
                     } else if ("VEHICLE_OWNER".equals(role)) {
                         String ownerId = firstNonBlank(parseField(entry, "ID"), submitter);
                         String vehicleId = firstNonBlank(parseField(entry, "VEHICLE"), parseField(entry, "INFO"));
@@ -143,7 +152,7 @@ public class ServerMain {//Philip
                 notifySubmitter(
                     service,
                     submitter,
-                    "Your submission was ACCEPTED. Request ID: " + requestId
+                    "Your submission was ACCEPTED. Request ID: " + requestId + completionMessage
                 );
                 System.out.println("Request ACCEPTED. Data saved to database.");
             } else {

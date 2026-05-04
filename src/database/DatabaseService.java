@@ -165,6 +165,17 @@ public class DatabaseService {
         }
     }
 
+    public void updateJobCompletionTime(String clientId, int completionTime) throws SQLException {
+        String sql = "UPDATE jobs SET completionTime = ? WHERE client_id = ?";
+
+        try (Connection conn = openConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, completionTime);
+            pstmt.setString(2, clientId);
+            pstmt.executeUpdate();
+        }
+    }
+
     public List<Job> getAllJobs() throws SQLException {
         String sql = "SELECT client_id, submitter_id, description, duration_hours, arrival_time, deadline_time, jobStatus, completionTime, vehicle_id FROM jobs";
         List<Job> jobs = new ArrayList<>();
