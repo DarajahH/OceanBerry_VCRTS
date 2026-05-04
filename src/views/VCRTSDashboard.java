@@ -1630,6 +1630,17 @@ public class VCRTSDashboard {
         }
     }
 
+    private void addWelcomeNotificationIfNeeded() {
+        try {
+            String username = service.getCurrentUsername();
+            String displayName = username == null || username.isBlank() ? "Client" : username;
+            service.addNotificationIfAbsent(
+                username,
+                "Welcome to VCRTS, " + displayName + ". Your client notifications will show admin decisions and request updates here."
+            );
+        } catch (IOException ignored) {}
+    }
+
     private void showClientNotifications() {
         if (!canViewNotifications()) {
             showFeedback("Notifications are available for client and owner accounts only.", WARNING, 3000);

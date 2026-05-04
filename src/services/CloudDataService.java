@@ -297,6 +297,19 @@ public class CloudDataService {
         appendLine(notificationsPath, username + JOB_FIELD_DELIMITER + message + JOB_FIELD_DELIMITER + "UNREAD");
     }
 
+    public synchronized void addNotificationIfAbsent(String username, String message) throws IOException {
+        if (username == null || username.isBlank() || message == null || message.isBlank()) {
+            return;
+        }
+        for (String line : readLines(notificationsPath)) {
+            String[] parts = line.split(JOB_FIELD_DELIMITER, 3);
+            if (parts.length >= 2 && username.equals(parts[0]) && message.equals(parts[1])) {
+                return;
+            }
+        }
+        addNotification(username, message);
+    }
+
     public synchronized List<String> getUnreadNotifications(String username) throws IOException {
         if (username == null || username.isBlank()) {
             return Collections.emptyList();
