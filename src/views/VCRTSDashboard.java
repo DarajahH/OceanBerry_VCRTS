@@ -136,6 +136,7 @@ public class VCRTSDashboard {
         frame.setVisible(true);
 
         if (isClientUser()) {
+            addWelcomeNotificationIfNeeded();
             refreshNotifications();
             displayUnreadNotificationsIfAny();
             startClientNotificationTimer();
@@ -1591,6 +1592,17 @@ public class VCRTSDashboard {
             notificationBadge.setText("0");
             notificationBadge.setVisible(false);
         }
+    }
+
+    private void addWelcomeNotificationIfNeeded() {
+        try {
+            String username = service.getCurrentUsername();
+            String displayName = username == null || username.isBlank() ? "Client" : username;
+            service.addNotificationIfAbsent(
+                username,
+                "Welcome to VCRTS, " + displayName + ". Your client notifications will show admin decisions and request updates here."
+            );
+        } catch (IOException ignored) {}
     }
 
     private void showClientNotifications() {
