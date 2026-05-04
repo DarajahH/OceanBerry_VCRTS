@@ -908,7 +908,7 @@ public class VCRTSDashboard {
         styleTextField(vehicleIdField);
 
         JLabel statusLabel = createWhiteLabel("Status");
-        JComboBox<String> statusField = new JComboBox<>(new String[] {"Usable", "In Use", "Maintenance"});
+        JComboBox<String> statusField = new JComboBox<>(new String[] {"Usable", "In Use"});
         styleComboBox(statusField);
 
         JLabel availabilityLabel = createWhiteLabel("Availability");
