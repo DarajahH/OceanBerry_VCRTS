@@ -8,8 +8,10 @@ import java.awt.event.MouseEvent;
 import java.io.*;
 import java.net.Socket;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -135,7 +137,7 @@ public class VCRTSDashboard {
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
 
-        if (isClientUser()) {
+        if (canViewNotifications()) {
             refreshNotifications();
             displayUnreadNotificationsIfAny();
             startClientNotificationTimer();
@@ -362,7 +364,7 @@ public class VCRTSDashboard {
         rightHeader.setOpaque(false);
         rightHeader.add(createHeaderBadge(currentUserRole));
 
-        if (isClientUser()) {
+        if (canViewNotifications()) {
             JButton notificationsBtn = new JButton("Notifications");
             styleSecondaryButton(notificationsBtn);
             notificationsBtn.setPreferredSize(new Dimension(110, 32));
@@ -538,7 +540,8 @@ public class VCRTSDashboard {
         tabbedPane.setForeground(TEXT_PRIMARY);
         tabbedPane.setBorder(BorderFactory.createEmptyBorder());
         tabbedPane.addTab("Job Request", createJobSubmissionTab());
-        tabbedPane.addTab("Vehicle Registration", createVehicleSubmissionTab(service));
+        // Vehicle registration is currently hidden from the client interface.
+        // tabbedPane.addTab("Vehicle Registration", createVehicleSubmissionTab(service));
 
         JPanel body = new JPanel(new GridLayout(0, 1, 0, 18));
         body.setOpaque(false);
@@ -578,7 +581,7 @@ public class VCRTSDashboard {
         durField = new JTextField();
         styleTextField(durField);
 
-        deadlineLabel = createWhiteLabel("Deadline");
+        deadlineLabel = createWhiteLabel("Deadline (YYYY/MM/DD HH:MM:SS)");
         deadlineField = new JTextField();
         deadlineField.setToolTipText("YYYY/MM/DD HH:MM:SS");
         styleTextField(deadlineField);
@@ -589,7 +592,7 @@ public class VCRTSDashboard {
         formPanel.add(Box.createVerticalStrut(12));
         formPanel.add(createFormFieldRow(infoLabel, infoField));
         formPanel.add(Box.createVerticalStrut(12));
-        formPanel.add(createFormFieldRow(deadlineLabel, deadlineField));
+        formPanel.add(createFormFieldRow(deadlineLabel, createDeadlineInputWithCalendar(deadlineField)));
         formPanel.add(Box.createVerticalStrut(16));
 
         JButton submitBtn = new JButton("Submit Transaction");
@@ -604,15 +607,8 @@ public class VCRTSDashboard {
     private JPanel createVehicleSubmissionTab(CloudDataService service) {
         JPanel formPanel = createFormStack();
 
-        JLabel ownerLabel = createWhiteLabel("Owner");
+        JLabel ownerLabel = createWhiteLabel("Owner ID");
         JTextField ownerIdField = new JTextField();
-        String currentUsername = service.getCurrentUsername();
-        if (currentUsername != null && !currentUsername.isBlank()) {
-            ownerIdField.setText(currentUsername);
-            if (isOwnerUser()) {
-                ownerIdField.setEditable(false);
-            }
-        }
         styleTextField(ownerIdField);
 
         JLabel vehicleLabel = createWhiteLabel("Vehicle ID");
@@ -635,7 +631,7 @@ public class VCRTSDashboard {
         JTextField vinField = new JTextField();
         styleTextField(vinField);
 
-        JLabel residencyLabel = createWhiteLabel("Residency Hours");
+        JLabel residencyLabel = createWhiteLabel("Residency Hours (Hrs)");
         JTextField residencyField = new JTextField();
         styleTextField(residencyField);
 
@@ -754,7 +750,8 @@ public class VCRTSDashboard {
 
                 new Thread(() -> {
                     try {
-                        inputStream.readUTF();
+                        String finalDecision = inputStream.readUTF();
+                        handleFinalAdminDecision(finalDecision, requestId);
                         inputStream.close();
                         outputStream.close();
                         socket.close();
@@ -899,8 +896,6 @@ public class VCRTSDashboard {
 
         JLabel ownerLabel = createWhiteLabel("Owner");
         JTextField ownerIdField = new JTextField();
-        ownerIdField.setText(service.getCurrentUsername() == null ? "" : service.getCurrentUsername());
-        ownerIdField.setEditable(false);
         styleTextField(ownerIdField);
 
         JLabel vehicleLabel = createWhiteLabel("Vehicle");
@@ -1359,6 +1354,48 @@ public class VCRTSDashboard {
         return row;
     }
 
+    private JPanel createDeadlineInputWithCalendar(JTextField field) {
+        JButton calendarButton = new JButton("Calendar");
+        styleSecondaryButton(calendarButton);
+        calendarButton.setPreferredSize(new Dimension(110, field.getPreferredSize().height));
+        calendarButton.addActionListener(e -> showDeadlineCalendar(field));
+
+        JPanel row = new JPanel(new BorderLayout(8, 0));
+        row.setOpaque(false);
+        row.add(field, BorderLayout.CENTER);
+        row.add(calendarButton, BorderLayout.EAST);
+        return row;
+    }
+
+    private void showDeadlineCalendar(JTextField targetField) {
+        LocalDateTime selectedDateTime = LocalDateTime.now();
+        String currentValue = targetField.getText().trim();
+        if (!currentValue.isBlank()) {
+            try {
+                selectedDateTime = LocalDateTime.parse(currentValue, dtf);
+            } catch (java.time.format.DateTimeParseException ignored) {
+            }
+        }
+
+        Date initialDate = Date.from(selectedDateTime.atZone(ZoneId.systemDefault()).toInstant());
+        JSpinner dateSpinner = new JSpinner(new SpinnerDateModel(initialDate, null, null, java.util.Calendar.MINUTE));
+        dateSpinner.setEditor(new JSpinner.DateEditor(dateSpinner, "yyyy/MM/dd HH:mm:ss"));
+
+        int result = JOptionPane.showConfirmDialog(
+            frame,
+            dateSpinner,
+            "Select Deadline",
+            JOptionPane.OK_CANCEL_OPTION,
+            JOptionPane.PLAIN_MESSAGE
+        );
+
+        if (result == JOptionPane.OK_OPTION) {
+            Date selectedDate = (Date) dateSpinner.getValue();
+            LocalDateTime deadline = LocalDateTime.ofInstant(selectedDate.toInstant(), ZoneId.systemDefault());
+            targetField.setText(dtf.format(deadline));
+        }
+    }
+
     private JPanel createInlineFormRow(JComponent left, JComponent right) {
         JPanel row = new JPanel(new GridLayout(1, 2, 12, 0));
         row.setOpaque(false);
@@ -1579,7 +1616,7 @@ public class VCRTSDashboard {
     }
 
     private void refreshNotifications() {
-        if (!isClientUser() || notificationBadge == null) {
+        if (!canViewNotifications() || notificationBadge == null) {
             return;
         }
         try {
@@ -1594,8 +1631,8 @@ public class VCRTSDashboard {
     }
 
     private void showClientNotifications() {
-        if (!isClientUser()) {
-            showFeedback("Notifications are available for clients only.", WARNING, 3000);
+        if (!canViewNotifications()) {
+            showFeedback("Notifications are available for client and owner accounts only.", WARNING, 3000);
             return;
         }
         try {
@@ -1634,7 +1671,7 @@ public class VCRTSDashboard {
     }
 
     private void displayUnreadNotificationsIfAny() {
-        if (!isClientUser()) {
+        if (!canViewNotifications()) {
             return;
         }
         try {
@@ -1911,7 +1948,7 @@ public class VCRTSDashboard {
         String role = (String) roleBox.getSelectedItem();
         boolean isClient = "CLIENT".equals(role);
 
-        idLabel.setText(isClient ? "Job ID:" : "Owner ID:");
+        idLabel.setText(isClient ? "Client ID:" : "Owner ID:");
         infoLabel.setText(isClient ? "Job Description:" : "Vehicle Info:");
         durLabel.setText(isClient ? "Job Duration (Hrs):" : "Residency (Hrs):");
 
@@ -1990,7 +2027,8 @@ public class VCRTSDashboard {
             // Keep socket open on a background thread until admin decides, then close
             new Thread(() -> {
                 try {
-                    inputStream.readUTF();
+                    String finalDecision = inputStream.readUTF();
+                    handleFinalAdminDecision(finalDecision, requestId);
                     inputStream.close();
                     outputStream.close();
                     socket.close();
@@ -2072,7 +2110,7 @@ public class VCRTSDashboard {
             new Thread(() -> {
                 try {
                     String finalDecision = inputStream.readUTF();
-                    refreshMonitor("Final Admin Decision: " + finalDecision);
+                    handleFinalAdminDecision(finalDecision, requestId);
                     socket.close();
                 } catch (IOException ignored) {}
             }).start();
@@ -2080,6 +2118,20 @@ public class VCRTSDashboard {
         } catch (IOException ex) {
             showFeedback("Server error: Make sure ServerMain is running at " + controllerEndpoint() + ".", DANGER, 5000);
         }
+    }
+
+    private void handleFinalAdminDecision(String finalDecision, String requestId) {
+        SwingUtilities.invokeLater(() -> {
+            boolean accepted = "ACCEPTED".equalsIgnoreCase(finalDecision);
+            String statusText = accepted ? "approved and saved" : "rejected; nothing was saved";
+            String message = "Admin " + statusText + " request " + requestId + ".";
+
+            refreshMonitor("Final Admin Decision: " + finalDecision + " (Request ID: " + requestId + ")");
+            showFeedback(message, accepted ? SUCCESS : WARNING, 5000);
+            refreshNotifications();
+            refreshClientJobsPanel();
+            refreshClientActivityPanel();
+        });
     }
 
     private Socket openControllerSocket() throws IOException {
@@ -2120,6 +2172,10 @@ public class VCRTSDashboard {
 
     private boolean isClientUser() {
         return "CLIENT".equals(currentUserRole);
+    }
+
+    private boolean canViewNotifications() {
+        return isClientUser() || isOwnerUser();
     }
 
     private boolean hasRightSidePanel() {
@@ -2491,16 +2547,10 @@ public class VCRTSDashboard {
 
         // Grab data from the selected row
         String requestId = (String) pendingRequestsModel.getValueAt(selectedRow, 0);
-        String submitter = (String) pendingRequestsModel.getValueAt(selectedRow, 1);
         String entry = (String) pendingRequestsModel.getValueAt(selectedRow, 3);
 
         try {
             service.writeAdminDecision(requestId, decision);
-
-            if (submitter != null && !submitter.isBlank()) {
-                String notifMsg = "Your submission was " + decision + ":\n" + entry;
-                service.addNotification(submitter, notifMsg);
-            }
 
             adminRequestStatusLabel.setText("Last response sent: " + decision);
             refreshMonitor("Admin decision sent for request:\n" + entry + "\nSTATUS: " + decision);

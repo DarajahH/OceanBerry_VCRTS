@@ -6,7 +6,6 @@ import java.net.Socket;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
-import javax.swing.*;
 import models.job.Job;
 import services.CloudDataService;
 
@@ -126,18 +125,34 @@ public class ServerMain {//Philip
                     } else {
                         service.appendLog(entry);
                     }
-                } catch (IllegalArgumentException ex) {
+                } catch (IllegalArgumentException | IOException ex) {
                     outputStream.writeUTF("REJECTED");
                     System.out.println("Accepted request could not be persisted: " + ex.getMessage());
+                    notifySubmitter(
+                        service,
+                        submitter,
+                        "Your submission was ACCEPTED by admin, but request " + requestId
+                            + " could not be saved."
+                    );
                     service.clearPendingRequest(requestId);
                     service.clearAdminDecision(requestId);
                     return;
                 }
 
                 outputStream.writeUTF("ACCEPTED");
+                notifySubmitter(
+                    service,
+                    submitter,
+                    "Your submission was ACCEPTED. Request ID: " + requestId
+                );
                 System.out.println("Request ACCEPTED. Data saved to database.");
             } else {
                 outputStream.writeUTF("REJECTED");
+                notifySubmitter(
+                    service,
+                    submitter,
+                    "Your submission was REJECTED by admin.Request ID: " + requestId
+                );
                 System.out.println("Request REJECTED. Nothing saved.");
             }
 
@@ -232,6 +247,17 @@ public class ServerMain {//Philip
                 return false;
             }
             Thread.sleep(250);
+        }
+    }
+
+    private static void notifySubmitter(CloudDataService service, String submitter, String message) {
+        if (submitter == null || submitter.isBlank()) {
+            return;
+        }
+        try {
+            service.addNotification(submitter, message);
+        } catch (IOException e) {
+            System.out.println("Unable to write client notification: " + e.getMessage());
         }
     }
 }

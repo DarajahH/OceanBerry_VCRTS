@@ -31,7 +31,7 @@ public class DatabaseService {
 
         try (PreparedStatement jobsStmt = conn.prepareStatement(
                 "CREATE TABLE IF NOT EXISTS jobs ("
-                    + "job_id VARCHAR(50) PRIMARY KEY, "
+                    + "client_id VARCHAR(50) PRIMARY KEY, "
                     + "submitter_id VARCHAR(50), "
                     + "description VARCHAR(255) NOT NULL, "
                     + "duration_hours INT NOT NULL, "
@@ -136,7 +136,7 @@ public class DatabaseService {
     }
 
     public void insertJob(Job job) throws SQLException {
-        String sql = "INSERT INTO jobs (job_id, submitter_id, description, duration_hours, arrival_time, deadline_time, jobStatus, completionTime, vehicle_id) "
+        String sql = "INSERT INTO jobs (client_id, submitter_id, description, duration_hours, arrival_time, deadline_time, jobStatus, completionTime, vehicle_id) "
                    + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         try (Connection conn = openConnection();
@@ -166,7 +166,7 @@ public class DatabaseService {
     }
 
     public List<Job> getAllJobs() throws SQLException {
-        String sql = "SELECT job_id, submitter_id, description, duration_hours, arrival_time, deadline_time, jobStatus, completionTime, vehicle_id FROM jobs";
+        String sql = "SELECT client_id, submitter_id, description, duration_hours, arrival_time, deadline_time, jobStatus, completionTime, vehicle_id FROM jobs";
         List<Job> jobs = new ArrayList<>();
 
         try (Connection conn = openConnection();
@@ -181,7 +181,7 @@ public class DatabaseService {
                 JobStatus status = (statusStr == null || statusStr.isBlank())
                     ? JobStatus.QUEUED
                     : JobStatus.valueOf(statusStr);
-                String jobId = rs.getString("job_id");
+                String jobId = rs.getString("client_id");
 
                 Job.registerExistingJobId(jobId);
                 jobs.add(new Job(
