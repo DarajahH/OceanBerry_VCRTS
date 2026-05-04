@@ -6,6 +6,13 @@
     "configurations": [
         {
             "type": "java",
+            "name": "Main",
+            "request": "launch",
+            "mainClass": "app.Main",
+            "projectName": "OceanBerry_VCRTS_23219485"
+        },
+        {
+            "type": "java",
             "name": "ServerMain",
             "request": "launch",
             "mainClass": "app.ServerMain",
