@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 CREATE TABLE IF NOT EXISTS jobs (
-    job_id          VARCHAR(50) PRIMARY KEY,
+    client_id          VARCHAR(50) PRIMARY KEY,
     submitter_id    VARCHAR(50),
     description     VARCHAR(255) NOT NULL,
     duration_hours  INT NOT NULL,
