@@ -5,6 +5,7 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.*;
+import java.net.URL;
 import java.net.Socket;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -57,10 +58,11 @@ public class VCRTSDashboard {
 
         // 1. Setup Main Frame - Added emoji to title for fun :) -DH
         frame = new JFrame("VCRTS - Cloud Control Center 🫐");
-        
-        
-        frame.setIconImage(Toolkit.getDefaultToolkit().getImage(getClass().getResource("/blueraspberry.png")));
-        
+        URL iconUrl = getClass().getResource("Brasberry.png");
+        if (iconUrl != null) {
+            frame.setIconImage(Toolkit.getDefaultToolkit().getImage(iconUrl));
+        }
+
         frame.setSize(1200, 800);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setLayout(new BorderLayout());
@@ -347,7 +349,7 @@ public class VCRTSDashboard {
         return header;
     }
 
-    /** Creates the unified client portal containing tabs for Job Submission and Vehicle Registration. -DH */
+    /** Creates the unified client portal with high-contrast navigation between job and vehicle flows. -DH */
     private JPanel createCombinedClientPanel(CloudDataService service) {
         JPanel mainPanel = new JPanel(new BorderLayout());
         mainPanel.setBackground(new Color(30, 30, 35));
@@ -358,14 +360,38 @@ public class VCRTSDashboard {
         title.setBorder(new EmptyBorder(20, 10, 10, 10));
         mainPanel.add(title, BorderLayout.NORTH);
 
-        JTabbedPane tabbedPane = new JTabbedPane();
-        tabbedPane.setFont(new Font("SansSerif", Font.BOLD, 14));
-        // Add the two separate screens as tabs
-        tabbedPane.addTab("Submit Job Request", createJobSubmissionTab());
-        tabbedPane.addTab("Register Vehicle", createVehicleSubmissionTab(service));
-        
-        mainPanel.add(tabbedPane, BorderLayout.CENTER);
-    // Shared Back Button at the bottom
+        CardLayout portalCards = new CardLayout();
+        JPanel cardStack = new JPanel(portalCards);
+        cardStack.setBackground(new Color(30, 30, 35));
+        cardStack.add(createJobSubmissionTab(), "JOB");
+        cardStack.add(createVehicleSubmissionTab(service), "VEHICLE");
+
+        JPanel nav = new JPanel(new GridLayout(1, 2, 14, 0));
+        nav.setBackground(new Color(30, 30, 35));
+        nav.setBorder(new EmptyBorder(4, 20, 16, 20));
+
+        JButton jobNav = createClientPortalNavButton("Submit Job Request");
+        JButton vehNav = createClientPortalNavButton("Register Vehicle");
+        jobNav.addActionListener(e -> {
+            portalCards.show(cardStack, "JOB");
+            applyClientPortalNavStyle(jobNav, vehNav, true);
+        });
+        vehNav.addActionListener(e -> {
+            portalCards.show(cardStack, "VEHICLE");
+            applyClientPortalNavStyle(jobNav, vehNav, false);
+        });
+        applyClientPortalNavStyle(jobNav, vehNav, true);
+
+        nav.add(jobNav);
+        nav.add(vehNav);
+
+        JPanel center = new JPanel(new BorderLayout());
+        center.setBackground(new Color(30, 30, 35));
+        center.add(nav, BorderLayout.NORTH);
+        center.add(cardStack, BorderLayout.CENTER);
+
+        mainPanel.add(center, BorderLayout.CENTER);
+
         JPanel bottomPanel = new JPanel();
         bottomPanel.setBackground(new Color(30, 30, 35));
         bottomPanel.add(createBackToHomeButton(service));
@@ -385,18 +411,11 @@ public class VCRTSDashboard {
         gbc.insets = new Insets(10, 10, 10, 10);
         gbc.weightx = 1.0;
 
+        roleBox = new JComboBox<>(new String[]{"CLIENT"});
+        roleBox.setSelectedItem("CLIENT");
+
         gbc.gridx = 0;
         gbc.gridy = 0;
-        panel.add(createWhiteLabel("Select Role:"), gbc);
-
-        roleBox = new JComboBox<>(new String[]{"CLIENT"});
-        roleBox.setEnabled(false);
-        roleBox.addActionListener(e -> adjustFields());
-        gbc.gridx = 1;
-        panel.add(roleBox, gbc);
-
-        gbc.gridx = 0;
-        gbc.gridy = 1;
         idLabel = createWhiteLabel("Client ID:");
         panel.add(idLabel, gbc);
         idField = new JTextField();
@@ -404,7 +423,7 @@ public class VCRTSDashboard {
         panel.add(idField, gbc);
 
         gbc.gridx = 0;
-        gbc.gridy = 2;
+        gbc.gridy = 1;
         infoLabel = createWhiteLabel("Job Description:");
         panel.add(infoLabel, gbc);
         infoField = new JTextField();
@@ -412,7 +431,7 @@ public class VCRTSDashboard {
         panel.add(infoField, gbc);
 
         gbc.gridx = 0;
-        gbc.gridy = 3;
+        gbc.gridy = 2;
         durLabel = createWhiteLabel("Duration (Hrs):");
         panel.add(durLabel, gbc);
         durField = new JTextField("e.g., '2' for 2 hours");
@@ -420,22 +439,22 @@ public class VCRTSDashboard {
         panel.add(durField, gbc);
 
         gbc.gridx = 0;
-        gbc.gridy = 4;
+        gbc.gridy = 3;
         deadlineLabel = createWhiteLabel("Job Deadline (YYYY/MM/DD HH:MM:SS):");
         panel.add(deadlineLabel, gbc);
         deadlineField = new JTextField();
         gbc.gridx = 1;
         panel.add(deadlineField, gbc);
 
-        JButton submitBtn = createStyledButton("Submit Transaction");
+        JButton submitBtn = createPrimaryActionButton("Submit Transaction");
         submitBtn.addActionListener(e -> saveEntry());
         gbc.gridx = 0;
-        gbc.gridy = 5;
+        gbc.gridy = 4;
         gbc.gridwidth = 2;
         gbc.insets = new Insets(30, 10, 10, 10);
         panel.add(submitBtn, gbc);
 
-        gbc.gridy = 6;
+        gbc.gridy = 5;
         gbc.weighty = 1.0;
         panel.add(Box.createGlue(), gbc);
 
@@ -493,7 +512,7 @@ public class VCRTSDashboard {
         gbc.gridx = 0;
         gbc.gridy = 5;
         gbc.gridwidth = 2;
-        JButton submitBtn = createStyledButton("Submit Vehicle to VC");
+        JButton submitBtn = createPrimaryActionButton("Submit Vehicle to VC");
         submitBtn.addActionListener(e -> {
             String ownerId = ownerIdField.getText().trim();
             String vehicleInfo = vehicleInfoField.getText().trim();
@@ -845,7 +864,9 @@ public class VCRTSDashboard {
         button.setFocusPainted(false);
         button.setCursor(new Cursor(Cursor.HAND_CURSOR));
         button.setBackground(new Color(60, 60, 65));
-        button.setForeground(Color.WHITE); 
+        button.setForeground(Color.WHITE);
+        button.setOpaque(true);
+        button.setContentAreaFilled(true);
         button.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(new Color(30, 80, 180), 1),
             BorderFactory.createEmptyBorder(8, 15, 8, 15)
@@ -863,6 +884,73 @@ public class VCRTSDashboard {
             }
         });
         
+        return button;
+    }
+
+    /** Large nav control for switching between client portal job and vehicle views. */
+    private JButton createClientPortalNavButton(String text) {
+        JButton b = new JButton(text);
+        b.setFont(new Font("SansSerif", Font.BOLD, 16));
+        b.setFocusPainted(false);
+        b.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        b.setOpaque(true);
+        b.setContentAreaFilled(true);
+        return b;
+    }
+
+    private void applyClientPortalNavStyle(JButton jobNav, JButton vehNav, boolean jobSelected) {
+        Color activeBg = new Color(38, 125, 245);
+        Color activeBorder = new Color(160, 210, 255);
+        Color idleBg = new Color(58, 65, 82);
+        Color idleFg = new Color(230, 232, 240);
+        Color idleBorder = new Color(110, 120, 145);
+
+        JButton active = jobSelected ? jobNav : vehNav;
+        JButton idle = jobSelected ? vehNav : jobNav;
+
+        active.setBackground(activeBg);
+        active.setForeground(Color.WHITE);
+        active.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(activeBorder, 2),
+            BorderFactory.createEmptyBorder(14, 12, 14, 12)
+        ));
+
+        idle.setBackground(idleBg);
+        idle.setForeground(idleFg);
+        idle.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(idleBorder, 1),
+            BorderFactory.createEmptyBorder(14, 12, 14, 12)
+        ));
+    }
+
+    /** High-contrast primary action (e.g. submit) on dark panels. */
+    private JButton createPrimaryActionButton(String text) {
+        JButton button = new JButton(text);
+        Color base = new Color(45, 140, 235);
+        Color hover = new Color(70, 165, 255);
+        button.setFont(new Font("SansSerif", Font.BOLD, 15));
+        button.setForeground(Color.WHITE);
+        button.setBackground(base);
+        button.setOpaque(true);
+        button.setContentAreaFilled(true);
+        button.setFocusPainted(false);
+        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        button.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(150, 205, 255), 2),
+            BorderFactory.createEmptyBorder(12, 20, 12, 20)
+        ));
+
+        button.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                button.setBackground(hover);
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                button.setBackground(base);
+            }
+        });
         return button;
     }
 
