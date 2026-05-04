@@ -177,16 +177,18 @@ public class DatabaseService {
     }
 
     public void updateJobVehicle(String clientId, String vehicleId) throws SQLException {
-        String sql = "UPDATE jobs SET vehicle_id = ? WHERE client_id = ?";
+        String sql = "UPDATE jobs SET vehicle_id = ?, jobStatus = ? WHERE client_id = ?";
 
         try (Connection conn = openConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             if (vehicleId == null || vehicleId.isBlank()) {
                 pstmt.setNull(1, java.sql.Types.VARCHAR);
+                pstmt.setString(2, JobStatus.QUEUED.name());
             } else {
                 pstmt.setString(1, vehicleId);
+                pstmt.setString(2, JobStatus.IN_PROGRESS.name());
             }
-            pstmt.setString(2, clientId);
+            pstmt.setString(3, clientId);
             int updatedRows = pstmt.executeUpdate();
             if (updatedRows == 0) {
                 throw new SQLException("No job found for client_id " + clientId);
