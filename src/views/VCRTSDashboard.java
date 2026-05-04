@@ -31,6 +31,10 @@ public class VCRTSDashboard {
     private static final String TASK_OWNER_SCREEN = "TASK_OWNER_SCREEN";
     private static final String VEHICLE_OWNER_SCREEN = "VEHICLE_OWNER_SCREEN";
     private static final int FORM_RAIL_WIDTH = 760;
+    private static final String DEFAULT_SERVER_HOST = "localhost";
+    private static final int DEFAULT_SERVER_PORT = 9806;
+    private static final String SERVER_HOST_ENV = "VCRTS_SERVER_HOST";
+    private static final String SERVER_PORT_ENV = "VCRTS_SERVER_PORT";
 
     private static final Color APP_BG = VcrtsTheme.CANVAS;
     private static final Color SHELL_BG = VcrtsTheme.SHELL;
@@ -721,7 +725,7 @@ public class VCRTSDashboard {
             try {
                 refreshMonitor("Connecting to VC Controller server...");
 
-                Socket socket = new Socket("localhost", 9806);
+                Socket socket = openControllerSocket();
                 DataOutputStream outputStream = new DataOutputStream(socket.getOutputStream());
                 DataInputStream inputStream = new DataInputStream(socket.getInputStream());
 
@@ -758,7 +762,7 @@ public class VCRTSDashboard {
                 }).start();
 
             } catch (java.net.ConnectException ex) {
-                showFeedback("Cannot connect to VC Controller server.", DANGER, 5000);
+                showFeedback("Cannot connect to VC Controller server at " + controllerEndpoint() + ".", DANGER, 5000);
             } catch (IOException ex) {
                 showFeedback("Connection error: " + ex.getMessage(), DANGER, 5000);
             }
@@ -1965,7 +1969,7 @@ public class VCRTSDashboard {
             // Send this the to VC Controller server over socket
             refreshMonitor("Connecting to VC Controller server...");
 
-            Socket socket = new Socket("localhost", 9806);
+            Socket socket = openControllerSocket();
             DataOutputStream outputStream = new DataOutputStream(socket.getOutputStream());
             DataInputStream inputStream = new DataInputStream(socket.getInputStream());
 
@@ -1996,7 +2000,7 @@ public class VCRTSDashboard {
         } catch (java.time.format.DateTimeParseException e) {
             showFeedback("Deadline must use format yyyy/MM/dd HH:mm:ss.", WARNING, 4200);
         } catch (java.net.ConnectException e) {
-            showFeedback("Cannot connect to VC Controller server. Make sure the server is running first.", DANGER, 5000);
+            showFeedback("Cannot connect to VC Controller server at " + controllerEndpoint() + ". Make sure the server is running first.", DANGER, 5000);
         } catch (IllegalArgumentException e) {
             showFeedback(e.getMessage(), WARNING, 4200);
         } catch (IOException e) {
@@ -2045,7 +2049,7 @@ public class VCRTSDashboard {
     private void sendToVCController(String entry, String id) {
         try {
             refreshMonitor("Connecting to VC Controller server...");
-            Socket socket = new Socket("localhost", 9806);
+            Socket socket = openControllerSocket();
             DataOutputStream outputStream = new DataOutputStream(socket.getOutputStream());
             DataInputStream inputStream = new DataInputStream(socket.getInputStream());
 
@@ -2074,7 +2078,33 @@ public class VCRTSDashboard {
             }).start();
 
         } catch (IOException ex) {
-            showFeedback("Server error: Make sure ServerMain is running.", DANGER, 5000);
+            showFeedback("Server error: Make sure ServerMain is running at " + controllerEndpoint() + ".", DANGER, 5000);
+        }
+    }
+
+    private Socket openControllerSocket() throws IOException {
+        return new Socket(resolveControllerHost(), resolveControllerPort());
+    }
+
+    private String controllerEndpoint() {
+        return resolveControllerHost() + ":" + resolveControllerPort();
+    }
+
+    private String resolveControllerHost() {
+        String host = System.getenv(SERVER_HOST_ENV);
+        return host == null || host.isBlank() ? DEFAULT_SERVER_HOST : host.trim();
+    }
+
+    private int resolveControllerPort() {
+        String configuredPort = System.getenv(SERVER_PORT_ENV);
+        if (configuredPort == null || configuredPort.isBlank()) {
+            return DEFAULT_SERVER_PORT;
+        }
+        try {
+            int port = Integer.parseInt(configuredPort.trim());
+            return port >= 1 && port <= 65535 ? port : DEFAULT_SERVER_PORT;
+        } catch (NumberFormatException e) {
+            return DEFAULT_SERVER_PORT;
         }
     }
 

@@ -57,6 +57,12 @@ java -cp 'out:flatlaf-3.7.jar' app.ServerMain
 3. If MySQL is not available, keep the checked-in text files in the project root so file fallback mode can still handle demo data.
 4. Use the admin dashboard to accept or reject pending client and vehicle-owner submissions.
 
+## Server Settings
+
+- The GUI connects to `localhost:9806` by default.
+- Override the host with `VCRTS_SERVER_HOST` when the GUI and server run on different machines.
+- Override the port with `VCRTS_SERVER_PORT` for both the GUI and server when port `9806` is unavailable.
+
 ## Storage Modes
 
 - DB-backed mode: if the MySQL JDBC driver is on the classpath and the configured database is reachable, VCRTS reads and writes through MySQL.

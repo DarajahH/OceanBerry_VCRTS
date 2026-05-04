@@ -12,6 +12,9 @@ import services.CloudDataService;
 
 public class ServerMain {//Philip
 
+    private static final int DEFAULT_PORT = 9806;
+    private static final String PORT_ENV = "VCRTS_SERVER_PORT";
+
     static ServerSocket serverSocket;
     static DataInputStream inputStream;
     static DataOutputStream outputStream;
@@ -24,13 +27,14 @@ public class ServerMain {//Philip
         ThemeWrapper.apply();
 
         System.out.println("----------$$$ This is the VC Controller (Server) $$$--------");
+        int port = resolveServerPort();
         System.out.println("waiting for client to connect...");
 
         // Start server on a background thread so GUI don't freeze
         new Thread(() -> {
             try {
-                serverSocket = new ServerSocket(9806);
-                System.out.println("Server started on port 9806!");
+                serverSocket = new ServerSocket(port);
+                System.out.println("Server started on port " + port + "!");
 
                 // Keep accepting client connections
                 while (true) {
@@ -45,6 +49,24 @@ public class ServerMain {//Philip
                 e.printStackTrace();
             }
         }).start();
+    }
+
+    private static int resolveServerPort() {
+        String configuredPort = System.getenv(PORT_ENV);
+        if (configuredPort == null || configuredPort.isBlank()) {
+            return DEFAULT_PORT;
+        }
+        try {
+            int port = Integer.parseInt(configuredPort.trim());
+            if (port < 1 || port > 65535) {
+                System.out.println(PORT_ENV + " must be between 1 and 65535. Using " + DEFAULT_PORT + ".");
+                return DEFAULT_PORT;
+            }
+            return port;
+        } catch (NumberFormatException e) {
+            System.out.println(PORT_ENV + " must be a number. Using " + DEFAULT_PORT + ".");
+            return DEFAULT_PORT;
+        }
     }
 
     private static void handleClient(Socket socket, CloudDataService service) {
