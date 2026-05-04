@@ -5,7 +5,6 @@ import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Dimension;
-import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
@@ -146,6 +145,29 @@ public class LoginScreen {
             clearStatus();
             if (service.validateUser(userField.getText(), new String(passField.getPassword()))) {
                 String role = service.getCurrentUserRole();
+                String username = service.getCurrentUsername();
+                String message;
+
+                switch (role) {
+                    case "CLIENT":
+                        message = "Welcome to VCRTS Client Portal, " + username + "! You can submit and track jobs.";
+                        break;
+                    case "OWNER":
+                        message = "Welcome to VCRTS Owner Portal, " + username + "! Manage your vehicles here.";
+                        break;
+                    case "ADMIN":
+                        message = "Welcome to VCRTS Admin Portal, " + username + "! Review and control requests.";
+                        break;
+                    default:
+                        message = "Welcome to VCRTS, " + username + "!";
+                }
+
+                JOptionPane.showMessageDialog(
+                    frame,
+                    message,
+                    "Login Successful",
+                    JOptionPane.INFORMATION_MESSAGE
+                );
                 frame.dispose();
                 new VCRTSDashboard(service, role);
             } else {
