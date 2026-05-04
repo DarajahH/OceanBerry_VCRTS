@@ -137,7 +137,7 @@ public class VCRTSDashboard {
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
 
-        if (canViewNotifications()) {
+        if (canReceiveNotifications()) {
             refreshNotifications();
             displayUnreadNotificationsIfAny();
             startClientNotificationTimer();
@@ -364,11 +364,11 @@ public class VCRTSDashboard {
         rightHeader.setOpaque(false);
         rightHeader.add(createHeaderBadge(currentUserRole));
 
-        if (canViewNotifications()) {
+        if (canReceiveNotifications()) {
             JButton notificationsBtn = new JButton("Notifications");
             styleSecondaryButton(notificationsBtn);
             notificationsBtn.setPreferredSize(new Dimension(110, 32));
-            notificationsBtn.addActionListener(e -> showClientNotifications());
+            notificationsBtn.addActionListener(e -> showUserNotifications());
             rightHeader.add(notificationsBtn);
 
             notificationBadge = createNotificationBadge(0);
@@ -1616,7 +1616,7 @@ public class VCRTSDashboard {
     }
 
     private void refreshNotifications() {
-        if (!canViewNotifications() || notificationBadge == null) {
+        if (!canReceiveNotifications() || notificationBadge == null) {
             return;
         }
         try {
@@ -1630,20 +1630,9 @@ public class VCRTSDashboard {
         }
     }
 
-    private void addWelcomeNotificationIfNeeded() {
-        try {
-            String username = service.getCurrentUsername();
-            String displayName = username == null || username.isBlank() ? "Client" : username;
-            service.addNotificationIfAbsent(
-                username,
-                "Welcome to VCRTS, " + displayName + ". Your client notifications will show admin decisions and request updates here."
-            );
-        } catch (IOException ignored) {}
-    }
-
-    private void showClientNotifications() {
-        if (!canViewNotifications()) {
-            showFeedback("Notifications are available for client and owner accounts only.", WARNING, 3000);
+    private void showUserNotifications() {
+        if (!canReceiveNotifications()) {
+            showFeedback("Notifications are available for clients and owners only.", WARNING, 3000);
             return;
         }
         try {
@@ -1682,7 +1671,7 @@ public class VCRTSDashboard {
     }
 
     private void displayUnreadNotificationsIfAny() {
-        if (!canViewNotifications()) {
+        if (!canReceiveNotifications()) {
             return;
         }
         try {
@@ -2185,7 +2174,7 @@ public class VCRTSDashboard {
         return "CLIENT".equals(currentUserRole);
     }
 
-    private boolean canViewNotifications() {
+    private boolean canReceiveNotifications() {
         return isClientUser() || isOwnerUser();
     }
 
