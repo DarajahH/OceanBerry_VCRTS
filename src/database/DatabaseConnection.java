@@ -7,7 +7,7 @@ import java.sql.SQLException;
 public class DatabaseConnection {
     private static final String DEFAULT_DB_URL = "jdbc:mysql://localhost:3306/vcrts_db";
     private static final String DEFAULT_DB_USERNAME = "root";
-    private static final String DEFAULT_DB_PASSWORD = "3426@Bronx";
+    private static final String DEFAULT_DB_PASSWORD = "password";
 
     // Returns a live MySQL connection for DatabaseService to use.
     public static Connection getConnection() throws SQLException {

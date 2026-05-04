@@ -183,6 +183,20 @@ public class CloudDataService {
         }
     }
 
+    public void updateJobVehicle(String jobId, String vehicleId) throws IOException {
+        requireDatabase();
+
+        if (jobId == null || jobId.isBlank()) {
+            throw new IllegalArgumentException("Job ID is required to assign a vehicle.");
+        }
+
+        try {
+            db.updateJobVehicle(jobId.trim(), vehicleId == null ? null : vehicleId.trim());
+        } catch (SQLException e) {
+            throw new IOException("Unable to assign vehicle to job in SQL.", e);
+        }
+    }
+
     public List<Map<String, String>> readAllVehicles() throws IOException {
         requireDatabase();
 
